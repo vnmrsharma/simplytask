@@ -16,10 +16,8 @@ export default async function handler(req: any, res: any) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Debug: Check if API key is present
   if (!OPENAI_API_KEY) {
-    console.error('OPENAI_API_KEY is missing');
-    return res.status(500).json({ error: 'OpenAI API key is not set in environment variables.' });
+    return res.status(500).json({ error: 'No OpenAI API key.' });
   }
 
   try {
