@@ -46,6 +46,35 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
   const [pendingTask, setPendingTask] = useState<any>(null);
   const [showConversation, setShowConversation] = useState(isExpanded);
 
+  // Helper functions
+  const formatDate = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+
+  const formatTime = (timeStr: string): string => {
+    const [hours, minutes] = timeStr.split(':');
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes));
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  // Add welcome message when conversation starts
+  const startConversation = () => {
+    setShowConversation(true);
+    if (conversation.length === 0) {
+      addMessage('assistant', "Hi! I'm Donna, your personal scheduling assistant. 🗓️ I'm here to help you organize your time and make scheduling effortless. Just tell me what you'd like to schedule, and I'll take care of the rest!");
+    }
+  };
+
   const addMessage = (type: 'user' | 'assistant', content: string) => {
     setConversation(prev => [...prev, {
       type,
@@ -100,13 +129,21 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
           break;
 
         case 'parsed':
-          addMessage('assistant', data.message || 'Task created successfully!');
+          // First show the assistant's helpful message if available
+          if (data.task?.assistantMessage) {
+            addMessage('assistant', data.task.assistantMessage);
+          } else {
+            addMessage('assistant', data.message || 'Task created successfully!');
+          }
+          
           if (data.task) {
             // Create the task
             await onCreateTask(data.task);
-            addMessage('assistant', `✅ Task "${data.task.title}" has been scheduled for ${data.task.startDate} at ${data.task.startTime}.`);
             
-            // Reset conversation
+            // Add a confirmation message
+            addMessage('assistant', `✅ All set! "${data.task.title}" is now in your calendar for ${formatDate(data.task.startDate)} at ${formatTime(data.task.startTime)}.`);
+            
+            // Reset conversation after a delay
             setTimeout(() => {
               setConversation([]);
               setConversationContext('');
@@ -114,7 +151,7 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
               if (!isExpanded) {
                 setShowConversation(false);
               }
-            }, 3000);
+            }, 4000);
           }
           break;
 
@@ -157,9 +194,11 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
 
   const quickSuggestions = [
     "Schedule a meeting with the team at 2 PM today",
-    "Block 2 hours for project work tomorrow morning",
-    "Remind me to call the client at 4 PM",
-    "Book a lunch meeting with Sarah next Tuesday"
+    "I need to work on the presentation tomorrow",
+    "Block time for deep work this afternoon",
+    "Set up a call with the client this week",
+    "Plan a team lunch next Friday",
+    "Add time to review the budget proposal"
   ];
 
   if (!showConversation && !isExpanded) {
@@ -171,18 +210,18 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
               <Brain className="h-5 w-5 text-blue-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                Smart Create
-                <Sparkles className="h-4 w-4 text-purple-500" />
-              </h3>
-              <p className="text-sm text-gray-600">Create tasks with natural language</p>
+                             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                 Meet Donna
+                 <Sparkles className="h-4 w-4 text-purple-500" />
+               </h3>
+               <p className="text-sm text-gray-600">Your AI scheduling assistant</p>
             </div>
           </div>
           <button
-            onClick={() => setShowConversation(true)}
+            onClick={startConversation}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
           >
-            Try it
+            Chat with Donna
           </button>
         </div>
 
@@ -192,7 +231,7 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="e.g., Schedule a meeting with John at 3 PM today..."
+                             placeholder="What would you like me to schedule for you?"
               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               disabled={isLoading}
             />
@@ -220,13 +259,13 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Brain className="h-6 w-6" />
-            <div>
-              <h3 className="font-semibold flex items-center gap-2">
-                Smart Task Creator
-                <Sparkles className="h-4 w-4" />
-              </h3>
-              <p className="text-blue-100 text-sm">Describe your task in natural language</p>
-            </div>
+                         <div>
+               <h3 className="font-semibold flex items-center gap-2">
+                 Donna - Your Scheduling Assistant
+                 <Sparkles className="h-4 w-4" />
+               </h3>
+               <p className="text-blue-100 text-sm">Just tell me what you need to schedule, and I'll handle the details</p>
+             </div>
           </div>
           {onClose && (
             <button
@@ -287,7 +326,7 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Describe your task naturally..."
+                             placeholder="Tell me what you'd like to schedule..."
               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               disabled={isLoading}
             />
@@ -332,7 +371,7 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
         {/* Quick Suggestions */}
         {conversation.length === 0 && (
           <div className="mt-4">
-            <p className="text-xs text-gray-500 mb-2">Try these examples:</p>
+                         <p className="text-xs text-gray-500 mb-2">Here are some things I can help you with:</p>
             <div className="grid grid-cols-1 gap-2">
               {quickSuggestions.map((suggestion, index) => (
                 <button
