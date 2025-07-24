@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { BarChart3, TrendingUp, TrendingDown, Calendar, Target, Award, Clock, ArrowUp, ArrowDown, Minus, PieChart, Activity } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, TrendingUp, Target, Clock, CheckCircle, AlertTriangle, BarChart3, PieChart, Sparkles, Loader2, Minus, Award, Activity } from 'lucide-react';
 import { Task } from '../types/Task';
 import { ReportPeriod } from '../types/Report';
 import { generateDailyReport, generateWeeklyReport, generateMonthlyReport, getWeekStart, formatReportDate, getProductivityInsight } from '../utils/reportUtils';
@@ -23,6 +23,7 @@ import {
   RadialBar,
   Pie
 } from 'recharts';
+import { MarkdownRenderer } from './MarkdownRenderer';
 
 // Chart color schemes
 const PRIORITY_COLORS = {
@@ -134,10 +135,10 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ tasks }) => 
     switch (trend) {
       case 'up':
       case 'improving':
-        return <ArrowUp className="w-4 h-4 text-green-600" />;
+        return <TrendingUp className="w-4 h-4 text-green-600" />;
       case 'down':
       case 'declining':
-        return <ArrowDown className="w-4 h-4 text-red-600" />;
+        return <AlertTriangle className="w-4 h-4 text-red-600" />;
       default:
         return <Minus className="w-4 h-4 text-gray-600" />;
     }
@@ -560,7 +561,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ tasks }) => 
         {aiSummary && (
           <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4 mt-2">
             <h4 className="text-sm font-bold text-green-700 mb-2">AI Daily Summary</h4>
-            <p className="text-gray-800 text-sm whitespace-pre-line">{String(aiSummary)}</p>
+                          <MarkdownRenderer content={String(aiSummary)} variant="ai-summary" />
           </div>
         )}
       </div>
@@ -818,7 +819,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ tasks }) => 
         {weeklyAiSummary && (
           <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-6 mt-4">
             <h4 className="text-lg font-bold text-green-700 mb-2">AI Weekly Summary</h4>
-            <p className="text-gray-800 text-base whitespace-pre-line">{String(weeklyAiSummary)}</p>
+                          <MarkdownRenderer content={String(weeklyAiSummary)} variant="ai-summary" />
           </div>
         )}
       </div>
@@ -1125,7 +1126,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ tasks }) => 
         {monthlyAiSummary && (
           <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-6 mt-4">
             <h4 className="text-lg font-bold text-green-700 mb-2">AI Monthly Summary</h4>
-            <p className="text-gray-800 text-base whitespace-pre-line">{String(monthlyAiSummary)}</p>
+                          <MarkdownRenderer content={String(monthlyAiSummary)} variant="ai-summary" />
           </div>
         )}
       </div>

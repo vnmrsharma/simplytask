@@ -11,6 +11,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { Task } from '../types/Task';
+import { MarkdownRenderer } from './MarkdownRenderer';
 
 interface SmartTaskCreatorProps {
   tasks: any[];
@@ -483,19 +484,27 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
                 className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-xs rounded-lg px-3 py-2 text-sm ${
+                  className={`max-w-sm lg:max-w-md rounded-lg px-3 py-2 text-sm ${
                     message.type === 'user'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white border border-gray-200 text-gray-800'
+                      ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-md'
+                      : 'bg-gradient-to-br from-blue-600 to-purple-600 text-white shadow-md'
                   }`}
                 >
                   {message.type === 'assistant' && (
-                    <div className="flex items-center gap-2 mb-1">
-                      <MessageCircle className="h-3 w-3 text-blue-600" />
-                      <span className="text-xs font-medium text-blue-600">Assistant</span>
+                    <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/20">
+                      <MessageCircle className="h-3 w-3 text-blue-200" />
+                      <span className="text-xs font-medium text-blue-100">Donna</span>
                     </div>
                   )}
-                  <div className="whitespace-pre-line">{message.content}</div>
+                  {message.type === 'user' ? (
+                    <div className="whitespace-pre-line text-white">{message.content}</div>
+                  ) : (
+                    <MarkdownRenderer 
+                      content={message.content} 
+                      variant="chat"
+                      className="text-white"
+                    />
+                  )}
                 </div>
               </div>
             ))}

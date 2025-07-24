@@ -59,7 +59,7 @@ const formatDateHeader = (date: Date, view: CalendarView): string => {
 
 export const TaskCalendar: React.FC<TaskCalendarProps> = ({ tasks, onTaskClick, onDateClick }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<CalendarView>('monthly');
+  const [view, setView] = useState<CalendarView>('daily');
 
   // Define helper functions first
   const getTasksForDate = (date: Date) => {
@@ -257,11 +257,24 @@ export const TaskCalendar: React.FC<TaskCalendarProps> = ({ tasks, onTaskClick, 
                            String(day.getMonth() + 1).padStart(2, '0') + '-' + 
                            String(day.getDate()).padStart(2, '0');
             
+            // Calculate task density for visual feedback
+            const taskDensity = dayTasks.length;
+            const completedTasks = dayTasks.filter(t => t.completed).length;
+            const pendingTasks = dayTasks.length - completedTasks;
+            
             return (
               <div key={index} className="min-h-[400px] flex flex-col">
-                <div className={`p-4 border-b border-gray-200 text-center ${
+                <div className={`p-3 border-b border-gray-200 text-center relative ${
                   isToday(day) ? 'bg-blue-50' : 'bg-gray-50'
                 }`}>
+                  {/* Task density indicator bar */}
+                  <div className={`absolute top-0 left-0 right-0 h-1 ${
+                    taskDensity === 0 ? 'bg-gray-200' :
+                    taskDensity <= 2 ? 'bg-green-400' :
+                    taskDensity <= 4 ? 'bg-yellow-400' :
+                    'bg-red-400'
+                  }`} />
+                  
                   <div className="text-sm font-medium text-gray-700">
                     {day.toLocaleDateString('en-US', { weekday: 'short' })}
                   </div>
@@ -271,43 +284,82 @@ export const TaskCalendar: React.FC<TaskCalendarProps> = ({ tasks, onTaskClick, 
                     {day.getDate()}
                   </div>
                   {dayTasks.length > 0 && (
-                    <div className="text-xs text-gray-500 mt-1">
-                      {dayTasks.length} task{dayTasks.length !== 1 ? 's' : ''}
+                    <div className="flex items-center justify-center gap-2 mt-1">
+                      <div className="text-xs text-gray-500">
+                        {dayTasks.length} task{dayTasks.length !== 1 ? 's' : ''}
+                      </div>
+                      {completedTasks > 0 && (
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span className="text-xs text-green-600">{completedTasks}</span>
+                        </div>
+                      )}
+                      {pendingTasks > 0 && (
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <span className="text-xs text-blue-600">{pendingTasks}</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
                 
                 <div 
-                  className="flex-1 p-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="flex-1 p-2 cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => onDateClick(dateStr)}
                 >
-                  <div className="space-y-2">
-                    {dayTasks.slice(0, 4).map(task => (
+                  <div className="space-y-1.5 max-h-80 overflow-y-auto">
+                    {dayTasks.slice(0, 6).map(task => (
                       <div
                         key={task.id}
                         onClick={(e) => {
                           e.stopPropagation();
                           onTaskClick(task);
                         }}
-                        className={`text-xs p-2 rounded cursor-pointer hover:shadow-sm transition-all ${
+                        className={`text-xs p-2 rounded cursor-pointer hover:shadow-sm transition-all relative ${
                           task.completed 
-                            ? 'bg-green-100 text-green-800 border border-green-200' 
+                            ? 'bg-green-50 text-green-700 border border-green-200' 
                             : isOverdue(task.endDate, task.endTime, task.completed)
-                            ? 'bg-red-100 text-red-800 border border-red-200'
-                            : 'bg-blue-100 text-blue-800 border border-blue-200'
+                            ? 'bg-red-50 text-red-700 border border-red-200'
+                            : task.priority === 'critical' ? 'bg-red-50 text-red-700 border border-red-200'
+                            : task.priority === 'high' ? 'bg-orange-50 text-orange-700 border border-orange-200'
+                            : task.priority === 'medium' ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                            : 'bg-gray-50 text-gray-700 border border-gray-200'
                         }`}
                       >
-                        <div className={`font-medium truncate ${task.completed ? 'line-through' : ''}`}>
-                          {task.title}
-                        </div>
-                        <div className="text-xs opacity-75 mt-1">
-                          {formatTime(task.startTime)}
+                        {/* Priority indicator */}
+                        <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l ${
+                          task.priority === 'critical' ? 'bg-red-500' :
+                          task.priority === 'high' ? 'bg-orange-500' :
+                          task.priority === 'medium' ? 'bg-blue-500' :
+                          'bg-gray-400'
+                        }`} />
+                        
+                        <div className="ml-2">
+                          <div className={`font-medium truncate leading-tight ${task.completed ? 'line-through' : ''}`}>
+                            {task.title}
+                          </div>
+                          <div className="text-xs opacity-75 leading-tight flex items-center gap-1 mt-0.5">
+                            <span>{formatTime(task.startTime)}</span>
+                            {task.category && (
+                              <>
+                                <span>•</span>
+                                <span className="capitalize">{task.category}</span>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
-                    {dayTasks.length > 4 && (
-                      <div className="text-xs text-gray-500 text-center py-1">
-                        +{dayTasks.length - 4} more
+                    {dayTasks.length > 6 && (
+                      <div 
+                        className="text-xs text-center py-2 text-gray-500 hover:text-gray-700 cursor-pointer border border-dashed border-gray-300 rounded"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDateClick(dateStr); // Open day view to see all tasks
+                        }}
+                      >
+                        +{dayTasks.length - 6} more tasks
                       </div>
                     )}
                   </div>
@@ -337,15 +389,24 @@ export const TaskCalendar: React.FC<TaskCalendarProps> = ({ tasks, onTaskClick, 
                            String(date.getMonth() + 1).padStart(2, '0') + '-' + 
                            String(date.getDate()).padStart(2, '0');
             
+            // Calculate task density for visual indicator
+            const taskDensity = dayTasks.length;
+            const densityColor = taskDensity === 0 ? 'bg-gray-100' : 
+                                taskDensity <= 2 ? 'bg-green-100' :
+                                taskDensity <= 4 ? 'bg-yellow-100' :
+                                'bg-red-100';
+            
             return (
               <div
                 key={index}
-                className={`bg-white min-h-[120px] p-3 cursor-pointer hover:bg-gray-50 transition-colors ${
-                  !isCurrentPeriod(date) ? 'text-gray-400 bg-gray-50' : ''
-                } ${isToday(date) ? 'ring-2 ring-blue-500 ring-inset bg-blue-50' : ''}`}
+                className={`bg-white min-h-[120px] p-2 cursor-pointer hover:bg-gray-50 transition-colors border-l-4 ${
+                  !isCurrentPeriod(date) ? 'text-gray-400 bg-gray-50 border-l-gray-200' : 
+                  isToday(date) ? 'ring-2 ring-blue-500 ring-inset bg-blue-50 border-l-blue-500' : 
+                  `border-l-transparent hover:${densityColor.replace('bg-', 'border-l-').replace('-100', '-300')}`
+                }`}
                 onClick={() => onDateClick(dateStr)}
               >
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-2">
                   <span className={`text-sm font-medium ${
                     isToday(date) ? 'text-blue-600' : 
                     !isCurrentPeriod(date) ? 'text-gray-400' : 'text-gray-900'
@@ -353,40 +414,86 @@ export const TaskCalendar: React.FC<TaskCalendarProps> = ({ tasks, onTaskClick, 
                     {date.getDate()}
                   </span>
                   {dayTasks.length > 0 && (
-                    <div className={`text-xs px-2 py-1 rounded-full ${
-                      isToday(date) ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {dayTasks.length}
+                    <div className={`flex items-center gap-1`}>
+                      {/* Task density dots */}
+                      <div className="flex gap-0.5">
+                        {Array.from({ length: Math.min(dayTasks.length, 5) }).map((_, i) => (
+                          <div
+                            key={i}
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              i < dayTasks.filter(t => !t.completed).length ? 
+                                taskDensity <= 2 ? 'bg-green-500' :
+                                taskDensity <= 4 ? 'bg-yellow-500' :
+                                'bg-red-500'
+                              : 'bg-gray-300'
+                            }`}
+                          />
+                        ))}
+                        {dayTasks.length > 5 && (
+                          <span className="text-xs text-gray-500 ml-1">+</span>
+                        )}
+                      </div>
+                      
+                      {/* Task count badge */}
+                      <div className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                        isToday(date) ? 'bg-blue-100 text-blue-700' : 
+                        taskDensity <= 2 ? 'bg-green-100 text-green-700' :
+                        taskDensity <= 4 ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {dayTasks.length}
+                      </div>
                     </div>
                   )}
                 </div>
                 
-                <div className="space-y-1">
-                  {dayTasks.slice(0, 3).map(task => (
+                <div className="space-y-1 max-h-20 overflow-hidden">
+                  {dayTasks.slice(0, 2).map(task => (
                     <div
                       key={task.id}
                       onClick={(e) => {
                         e.stopPropagation();
                         onTaskClick(task);
                       }}
-                      className={`text-xs p-2 rounded cursor-pointer hover:opacity-80 transition-opacity ${
+                      className={`text-xs p-1.5 rounded cursor-pointer hover:opacity-80 transition-opacity relative ${
                         task.completed 
-                          ? 'bg-green-100 text-green-800 line-through border border-green-200' 
+                          ? 'bg-green-50 text-green-700 border border-green-200' 
                           : isOverdue(task.endDate, task.endTime, task.completed)
-                          ? 'bg-red-100 text-red-800 border border-red-200'
-                          : task.priority === 'critical' ? 'bg-red-100 text-red-800 border border-red-200'
-                          : task.priority === 'high' ? 'bg-orange-100 text-orange-800 border border-orange-200'
-                          : task.priority === 'medium' ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                          : 'bg-gray-100 text-gray-800 border border-gray-200'
+                          ? 'bg-red-50 text-red-700 border border-red-200'
+                          : task.priority === 'critical' ? 'bg-red-50 text-red-700 border border-red-200'
+                          : task.priority === 'high' ? 'bg-orange-50 text-orange-700 border border-orange-200'
+                          : task.priority === 'medium' ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                          : 'bg-gray-50 text-gray-700 border border-gray-200'
                       }`}
                     >
-                      <div className="truncate font-medium">{task.title}</div>
-                      <div className="text-xs opacity-75 mt-1">{formatTime(task.startTime)}</div>
+                      {/* Priority indicator */}
+                      <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l ${
+                        task.priority === 'critical' ? 'bg-red-500' :
+                        task.priority === 'high' ? 'bg-orange-500' :
+                        task.priority === 'medium' ? 'bg-blue-500' :
+                        'bg-gray-400'
+                      }`} />
+                      
+                      <div className="ml-2">
+                        <div className={`truncate font-medium leading-tight ${task.completed ? 'line-through' : ''}`}>
+                          {task.title}
+                        </div>
+                        <div className="text-xs opacity-75 leading-tight">
+                          {formatTime(task.startTime)}
+                        </div>
+                      </div>
                     </div>
                   ))}
-                  {dayTasks.length > 3 && (
-                    <div className="text-xs text-gray-500 text-center py-1">
-                      +{dayTasks.length - 3} more
+                  
+                  {dayTasks.length > 2 && (
+                    <div 
+                      className="text-xs text-center py-1 text-gray-500 hover:text-gray-700 cursor-pointer border border-dashed border-gray-300 rounded"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDateClick(dateStr); // Open day view to see all tasks
+                      }}
+                    >
+                      +{dayTasks.length - 2} more tasks
                     </div>
                   )}
                 </div>
