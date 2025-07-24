@@ -46,6 +46,8 @@ interface NLPResponse {
 }
 
 export default async function handler(req: any, res: any) {
+  console.log('API handler called:', req.method);
+  
   // Add CORS headers
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -58,37 +60,31 @@ export default async function handler(req: any, res: any) {
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ 
-      status: 'error', 
-      message: 'Method not allowed' 
-    });
+    console.log('Method not allowed:', req.method);
+    return res.status(405).json({ status: 'error', message: 'Method not allowed' });
   }
 
-  // Validate environment variables
   if (!process.env.OPENAI_API_KEY) {
     console.error('OPENAI_API_KEY is not set');
-    return res.status(500).json({ 
-      status: 'error', 
-      message: 'OpenAI API key is not configured' 
-    });
+    return res.status(500).json({ status: 'error', message: 'OpenAI API key is not configured' });
   }
 
   try {
+    console.log('Processing request body...');
     const { inputText, existingTasks, userId, conversationContext } = req.body;
-
-    if (!inputText || !inputText.trim()) {
-      return res.status(400).json({ 
-        status: 'error', 
-        message: 'Please provide task details' 
-      });
-    }
-
-    console.log('Processing NLP request:', { 
-      inputLength: inputText.length,
-      hasExistingTasks: !!existingTasks,
-      tasksCount: existingTasks?.length || 0
+    
+    console.log('Request data:', {
+      inputText: inputText || 'undefined',
+      existingTasksCount: existingTasks?.length || 0,
+      conversationContext: conversationContext || 'none'
     });
 
+    if (!inputText) {
+      console.log('No input text provided');
+      return res.status(400).json({ status: 'error', message: 'Input text is required' });
+    }
+
+    console.log('Creating system prompt...');
     // Create system prompt for task parsing
     const systemPrompt = `You are Donna, a friendly and proactive personal scheduling assistant with FULL access to the user's calendar. Your primary goal is to help users organize their time effectively and reduce their mental load through intelligent task management.
 
@@ -100,35 +96,6 @@ PERSONALITY:
 - Slightly playful but always professional
 - Remember that you're here to help people achieve their goals through better time management
 - You have COMPLETE awareness of their existing schedule and can manage everything
-
-FULL CALENDAR ACCESS & CAPABILITIES:
-You have complete access to the user's existing tasks and can:
-
-1. **VIEW & ANALYZE EXISTING SCHEDULE:**
-   - See all existing tasks, meetings, and commitments
-   - Understand patterns, preferences, and scheduling habits
-   - Identify busy periods, free time, and optimal scheduling windows
-   - Recognize recurring commitments and personal preferences
-
-2. **INTELLIGENT CONFLICT DETECTION:**
-   - Detect exact time overlaps with existing tasks
-   - Identify potential scheduling conflicts (back-to-back meetings, travel time needs)
-   - Recognize when tasks might be too close together
-   - Spot overloaded days and suggest better distribution
-
-3. **ADVANCED TASK MANAGEMENT:**
-   - ADD: Create new tasks with smart defaults and optimal timing
-   - EDIT: Modify existing tasks (title, time, date, priority, details)
-   - DELETE: Remove tasks that are no longer needed
-   - SHIFT: Move tasks to better time slots
-   - RESCHEDULE: Suggest alternative times for conflicting tasks
-   - OPTIMIZE: Reorganize schedules for better productivity
-
-4. **SMART SCHEDULING SUGGESTIONS:**
-   - Suggest optimal times based on existing schedule
-   - Recommend grouping similar tasks together
-   - Identify ideal times for different types of work (focus time, meetings, calls)
-   - Propose schedule optimizations for better work-life balance
 
 CONVERSATION CAPABILITIES:
 You can handle both scheduling tasks AND general conversation:
@@ -147,43 +114,6 @@ You can handle both scheduling tasks AND general conversation:
    - Optimize schedules: "Reorganize my afternoon", "Find me 2 hours for deep work"
    - Provide schedule analysis: "How busy am I this week?", "When am I free?"
 
-ENHANCED CONFLICT RESOLUTION:
-When conflicts are detected, provide intelligent options:
-- **Option 1**: Reschedule the new task to a better time
-- **Option 2**: Move the existing conflicting task
-- **Option 3**: Suggest splitting tasks into smaller chunks
-- **Option 4**: Recommend alternative days/times
-- **Smart reasoning**: Explain WHY certain times work better
-
-TASK MANAGEMENT ACTIONS:
-Handle these types of requests intelligently:
-
-**VIEWING REQUESTS:**
-- "What do I have today?" → List today's tasks with times and details
-- "Show me my schedule for tomorrow" → Comprehensive schedule overview
-- "When am I free this week?" → Identify available time slots
-
-**EDITING REQUESTS:**
-- "Move my 3pm meeting to 4pm" → Reschedule existing task
-- "Change the project review to high priority" → Update task properties
-- "Make the team lunch longer" → Extend task duration
-
-**DELETION REQUESTS:**
-- "Cancel my 2pm call" → Remove specific task
-- "Delete all meetings with John" → Remove multiple matching tasks
-
-**OPTIMIZATION REQUESTS:**
-- "Reorganize my afternoon" → Suggest better task arrangement
-- "Find me time for deep work" → Identify optimal focus periods
-- "Make my schedule less busy" → Suggest task redistribution
-
-RESPONSE STRATEGY:
-- For greetings/casual chat: Respond warmly, then offer to help with scheduling
-- For schedule viewing: Provide detailed, well-formatted schedule information
-- For task management: Confirm actions and explain the reasoning
-- For conflicts: Present smart options with clear explanations
-- For optimization: Suggest improvements with reasoning
-
 TODAY'S CONTEXT:
 - Current date: ${new Date().toISOString().split('T')[0]}
 - Current time: ${new Date().toTimeString().slice(0, 5)}
@@ -192,112 +122,39 @@ TODAY'S CONTEXT:
 EXISTING TASKS CONTEXT:
 You have access to these existing tasks: ${JSON.stringify(existingTasks || [], null, 2)}
 
-RESPONSE FORMATS:
-
-**CONVERSATION RESPONSES:**
+For simple conversational responses, use this format:
 {
-  "conversationType": "greeting|casual|supportive|capabilities|schedule_view|task_management",
+  "conversationType": "greeting|casual|supportive|capabilities",
   "response": "Your helpful response",
-  "followUp": true/false,
-  "suggestion": "Optional follow-up suggestion",
-  "scheduleData": { /* Optional schedule information */ },
-  "taskActions": [ /* Optional list of actions taken */ ]
+  "followUp": true/false
 }
 
-**TASK MANAGEMENT RESPONSES:**
-{
-  "conversationType": "task_management",
-  "action": "add|edit|delete|reschedule|view|optimize",
-  "response": "Explanation of what you're doing",
-  "taskData": { /* Task data for creation/editing */ },
-  "taskId": "existing_task_id", // For edits/deletes
-  "suggestions": ["Alternative options"],
-  "scheduleAnalysis": "Analysis of the change impact"
-}
-
-**SCHEDULING WITH CONFLICTS:**
+For scheduling tasks, use this format:
 {
   "conversationType": "scheduling",
-  "conflictDetected": true,
-  "response": "Explanation of the conflict",
-  "conflictOptions": [
-    {
-      "option": "reschedule_new",
-      "description": "Schedule new task at suggested time",
-      "suggestedTime": "14:00",
-      "reasoning": "This avoids your existing meeting and gives you prep time"
-    },
-    {
-      "option": "move_existing", 
-      "description": "Move existing task to make room",
-      "taskToMove": "existing_task_id",
-      "newTime": "15:00",
-      "reasoning": "The existing task is flexible and can be moved"
-    }
-  ],
-  "taskData": { /* New task data */ }
+  "title": "extracted task title",
+  "startDate": "YYYY-MM-DD",
+  "endDate": "YYYY-MM-DD",
+  "startTime": "HH:MM",
+  "endTime": "HH:MM",
+  "priority": "medium",
+  "category": "meeting",
+  "estimatedHours": 1.0,
+  "assistantMessage": "Helpful response about the task"
 }
 
-**SCHEDULE VIEWING:**
-{
-  "conversationType": "schedule_view",
-  "response": "Here's your schedule overview",
-  "scheduleData": {
-    "period": "today|tomorrow|this_week",
-    "tasks": [ /* Formatted task list */ ],
-    "freeSlots": [ /* Available time periods */ ],
-    "insights": ["Schedule analysis insights"]
-  }
-}
-
-IMPORTANT GUIDELINES:
-- Always respond in valid JSON format
-- Be proactive in suggesting improvements
-- Consider work-life balance in recommendations
-- Explain reasoning behind scheduling decisions
-- Provide multiple options when possible
-- Be encouraging and supportive about productivity goals
-- Remember context from previous interactions
-- Always confirm actions before making changes
-
-EXAMPLES:
-
-User: "What do I have tomorrow?"
-Response: {
-  "conversationType": "schedule_view",
-  "response": "Here's your schedule for tomorrow! You have 3 tasks planned...",
-  "scheduleData": {
-    "period": "tomorrow",
-    "tasks": [/* formatted task list */],
-    "freeSlots": ["10:00-12:00", "15:30-17:00"],
-    "insights": ["Your morning is packed, but you have good focus time in the afternoon"]
-  }
-}
-
-User: "Move my 3pm meeting to 4pm"
-Response: {
-  "conversationType": "task_management", 
-  "action": "reschedule",
-  "response": "I'll move your 3pm meeting to 4pm. This actually works better because it gives you a longer lunch break and doesn't conflict with your preparation time.",
-  "taskId": "existing_task_id",
-  "taskData": { "startTime": "16:00", "endTime": "17:00" },
-  "scheduleAnalysis": "This change improves your afternoon flow and reduces rushing between tasks."
-}
-
-Remember: You are the user's intelligent scheduling partner with complete calendar awareness and task management capabilities!`;
+IMPORTANT: Always respond with valid JSON only.`;
 
     const userPrompt = conversationContext 
       ? `Previous context: ${conversationContext}\n\nUser's new message: ${inputText}`
       : inputText;
 
-    console.log('Calling OpenAI with input:', inputText);
-
-    // Create a timeout promise
+    console.log('Making OpenAI API call...');
+    
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error('OpenAI request timeout')), 25000);
     });
 
-    // Race between OpenAI call and timeout
     const completion = await Promise.race([
       openai.chat.completions.create({
         model: 'gpt-4o-mini',
@@ -311,16 +168,20 @@ Remember: You are the user's intelligent scheduling partner with complete calend
       timeoutPromise
     ]) as any;
 
+    console.log('OpenAI response received successfully');
+
     const responseText = completion.choices[0]?.message?.content;
     if (!responseText) {
-      throw new Error('No response from OpenAI');
+      console.error('No response text from OpenAI');
+      throw new Error('No response from AI');
     }
 
-    console.log('OpenAI response received successfully');
+    console.log('Raw OpenAI response:', responseText);
 
     let parsedTask: ParsedTask & { needsFollowUp?: boolean; followUpQuestion?: string; assistantMessage?: string };
     try {
       parsedTask = JSON.parse(responseText);
+      console.log('Successfully parsed response:', parsedTask);
     } catch (parseError) {
       console.error('JSON parse error:', parseError);
       console.error('Raw response:', responseText);
@@ -329,6 +190,7 @@ Remember: You are the user's intelligent scheduling partner with complete calend
 
     // Handle conversational responses (non-scheduling)
     if (parsedTask.conversationType && parsedTask.conversationType !== 'scheduling') {
+      console.log('Returning conversational response');
       return res.status(200).json({
         conversationType: parsedTask.conversationType,
         response: parsedTask.response || parsedTask.assistantMessage,
@@ -348,8 +210,10 @@ Remember: You are the user's intelligent scheduling partner with complete calend
 
     // Handle scheduling responses
     if (parsedTask.conversationType === 'scheduling' || parsedTask.title) {
+      console.log('Processing scheduling response');
       // Validate required fields for task creation
       if (!parsedTask.title || !parsedTask.startDate || !parsedTask.startTime || !parsedTask.endTime) {
+        console.log('Missing required fields for scheduling');
         return res.status(200).json({
           status: 'need_more_info',
           question: 'I need a bit more information to schedule this task. Could you please specify the title, date, start time, and end time?',
@@ -361,6 +225,7 @@ Remember: You are the user's intelligent scheduling partner with complete calend
       const conflicts = checkConflicts(parsedTask, existingTasks || []);
       
       if (conflicts.length > 0) {
+        console.log('Conflicts detected:', conflicts.length);
         return res.status(200).json({
           status: 'conflict',
           message: `You have ${conflicts.length} conflicting task(s) during this time. Would you like to reschedule?`,
@@ -370,6 +235,7 @@ Remember: You are the user's intelligent scheduling partner with complete calend
       }
 
       // Return scheduling task data
+      console.log('Returning successful scheduling response');
       return res.status(200).json({
         conversationType: 'scheduling',
         title: parsedTask.title,
@@ -386,51 +252,18 @@ Remember: You are the user's intelligent scheduling partner with complete calend
       });
     }
 
-    // Legacy handling for old format responses
-    if (parsedTask.needsFollowUp || parsedTask.confidence < 0.6) {
-      return res.status(200).json({
-        status: 'need_more_info',
-        question: parsedTask.followUpQuestion || 'Could you provide more details about this task?',
-        task: parsedTask
-      });
-    }
-
-    const conflicts = checkConflicts(parsedTask, existingTasks || []);
-    
-    if (conflicts.length > 0) {
-      return res.status(200).json({
-        status: 'conflict',
-        message: `You have ${conflicts.length} conflicting task(s) during this time. Would you like to reschedule?`,
-        conflicts: conflicts,
-        task: parsedTask
-      });
-    }
-
+    console.log('No valid response type detected, treating as error');
     return res.status(200).json({
-      status: 'parsed',
-      message: 'Task details extracted successfully!',
-      task: {
-        title: parsedTask.title,
-        description: parsedTask.description || '',
-        startDate: parsedTask.startDate,
-        endDate: parsedTask.endDate || parsedTask.startDate,
-        startTime: parsedTask.startTime,
-        endTime: parsedTask.endTime,
-        priority: parsedTask.priority || 'medium',
-        category: parsedTask.category || 'personal',
-        estimatedHours: parsedTask.estimatedHours || 1.0,
-        participants: parsedTask.participants || [],
-        recurrence: null,
-        stakeholders: parsedTask.participants || [],
-        links: []
-      }
+      status: 'error',
+      message: 'I had trouble understanding your request. Could you try rephrasing?'
     });
 
   } catch (error: any) {
     console.error('NLP Task Creation Error:', error);
-    return res.status(500).json({
-      status: 'error',
-      message: error.message || 'Failed to process task request'
+    return res.status(500).json({ 
+      status: 'error', 
+      message: error.message || 'Failed to process task request',
+      error: error.toString() 
     });
   }
 }

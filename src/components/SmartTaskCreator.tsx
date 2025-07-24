@@ -192,6 +192,12 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
     setShowConversation(true);
 
     try {
+      console.log('Making API call to /api/nlp-task-create with:', {
+        inputText: userInput,
+        existingTasks: tasks?.length || 0,
+        conversationContext: conversationContext
+      });
+
       const response = await fetch('/api/nlp-task-create', {
         method: 'POST',
         headers: {
@@ -204,10 +210,18 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
         }),
       });
 
+      console.log('API response received:', response.status, response.statusText);
+
+      if (!response.ok) {
+        throw new Error(`API call failed: ${response.status} ${response.statusText}`);
+      }
+
       const data: ParsedTaskResponse = await response.json();
+      console.log('Parsed response data:', data);
       
       // Handle different response types
       if (data.conversationType) {
+        console.log('Handling conversational response:', data.conversationType);
         // Handle conversational responses
         if (data.conversationType === 'scheduling') {
           // This is a scheduling response - treat it like a parsed task
@@ -350,11 +364,12 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
           break;
       }
 
-    } catch (error) {
-      console.error('Smart task creation error:', error);
-      addMessage('assistant', '❌ Sorry, I encountered an error. Please try again.');
+    } catch (error: any) {
+      console.error('Error in handleSubmit:', error);
+      addMessage('assistant', `❌ Sorry, I encountered an error: ${error.message || 'Unknown error'}. Please try again.`);
     } finally {
       setIsLoading(false);
+      console.log('Request completed, loading set to false');
     }
   };
 
