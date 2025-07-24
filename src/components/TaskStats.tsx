@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle, Clock, AlertTriangle, BarChart3, Target, Users, DollarSign, TrendingUp } from 'lucide-react';
+import { CheckCircle, Clock, AlertTriangle, TrendingUp, Target } from 'lucide-react';
 import { Task } from '../types/Task';
 import { isOverdue, isToday } from '../utils/dateUtils';
 
@@ -12,126 +12,68 @@ export const TaskStats: React.FC<TaskStatsProps> = ({ tasks }) => {
     const total = tasks.length;
     const completed = tasks.filter(task => task.completed).length;
     const overdue = tasks.filter(task => !task.completed && isOverdue(task.endDate, task.endTime, task.completed)).length;
-    const dueToday = tasks.filter(task => !task.completed && isToday(task.endDate)).length;
-    const strategic = tasks.filter(task => task.category === 'strategic' && !task.completed).length;
-    const delegated = tasks.filter(task => task.delegatedTo && !task.completed).length;
-    const highBudgetImpact = tasks.filter(task => (task.budgetImpact === 'high' || task.budgetImpact === 'medium') && !task.completed).length;
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const pending = total - completed;
 
     return { 
       total, 
       completed, 
       overdue, 
-      dueToday, 
-      strategic, 
-      delegated, 
-      highBudgetImpact, 
       completionRate,
-      pending: total - completed
+      pending
     };
   }, [tasks]);
 
-  const statItems = [
-    {
-      label: 'Total Tasks',
-      value: stats.total,
-      icon: Target,
-      color: 'text-gray-600',
-      bgColor: 'bg-gray-50',
-    },
-    {
-      label: 'Completed',
-      value: stats.completed,
-      icon: CheckCircle,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-    },
-    {
-      label: 'Pending',
-      value: stats.pending,
-      icon: Clock,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-    },
-    {
-      label: 'Overdue',
-      value: stats.overdue,
-      icon: AlertTriangle,
-      color: 'text-red-600',
-      bgColor: 'bg-red-50',
-    },
-  ];
-
-  const executiveStats = [
-    {
-      label: 'Strategic Tasks',
-      value: stats.strategic,
-      icon: Target,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-    },
-    {
-      label: 'Delegated Tasks',
-      value: stats.delegated,
-      icon: Users,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-    },
-    {
-      label: 'High Budget Impact',
-      value: stats.highBudgetImpact,
-      icon: DollarSign,
-      color: 'text-red-600',
-      bgColor: 'bg-red-50',
-    },
-    {
-      label: 'Completion Rate',
-      value: `${stats.completionRate}%`,
-      icon: TrendingUp,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-    },
-  ];
-
   return (
-    <div className="space-y-6">
-      {/* Main Stats */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Task Overview</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {statItems.map((item) => (
-            <div key={item.label} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-center">
-                <div className={`p-3 rounded-lg ${item.bgColor}`}>
-                  <item.icon className={`h-6 w-6 ${item.color}`} />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">{item.label}</p>
-                  <p className="text-2xl font-bold text-gray-900">{item.value}</p>
-                </div>
-              </div>
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <Target className="h-5 w-5 text-blue-600" />
+          Task Overview
+        </h3>
+        
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6">
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-1 text-gray-600 mb-1">
+              <Target size={14} />
+              <span className="text-xs font-medium">Total</span>
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Executive Stats */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Executive Metrics</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {executiveStats.map((item) => (
-            <div key={item.label} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-center">
-                <div className={`p-3 rounded-lg ${item.bgColor}`}>
-                  <item.icon className={`h-6 w-6 ${item.color}`} />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">{item.label}</p>
-                  <p className="text-2xl font-bold text-gray-900">{item.value}</p>
-                </div>
-              </div>
+            <div className="text-xl sm:text-2xl font-bold text-gray-900">{stats.total}</div>
+          </div>
+          
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-1 text-green-600 mb-1">
+              <CheckCircle size={14} />
+              <span className="text-xs font-medium">Done</span>
             </div>
-          ))}
+            <div className="text-xl sm:text-2xl font-bold text-green-600">{stats.completed}</div>
+          </div>
+          
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-1 text-blue-600 mb-1">
+              <Clock size={14} />
+              <span className="text-xs font-medium">Pending</span>
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-blue-600">{stats.pending}</div>
+          </div>
+          
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-1 text-purple-600 mb-1">
+              <TrendingUp size={14} />
+              <span className="text-xs font-medium">Rate</span>
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-purple-600">{stats.completionRate}%</div>
+          </div>
+          
+          {stats.overdue > 0 && (
+            <div className="text-center col-span-2 sm:col-span-1">
+              <div className="flex items-center justify-center gap-1 text-red-600 mb-1">
+                <AlertTriangle size={14} />
+                <span className="text-xs font-medium">Overdue</span>
+              </div>
+              <div className="text-xl sm:text-2xl font-bold text-red-600">{stats.overdue}</div>
+            </div>
+          )}
         </div>
       </div>
     </div>
