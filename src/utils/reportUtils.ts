@@ -2,27 +2,57 @@ import { Task } from '../types/Task';
 import { DailyReport, WeeklyReport, MonthlyReport } from '../types/Report';
 
 export const generateDailyReport = (tasks: Task[], date: string): DailyReport => {
+  // Filter tasks that are relevant for this specific date
   const dayTasks = tasks.filter(task => {
-    const taskDate = new Date(task.createdAt).toISOString().split('T')[0];
-    const completedDate = task.completedAt ? new Date(task.completedAt).toISOString().split('T')[0] : null;
-    return taskDate === date || completedDate === date;
+    const taskStartDate = task.startDate;
+    const taskEndDate = task.endDate;
+    const taskCreatedDate = new Date(task.createdAt).toISOString().split('T')[0];
+    const taskCompletedDate = task.completedAt ? new Date(task.completedAt).toISOString().split('T')[0] : null;
+    
+    // Include tasks that:
+    // 1. Start on this date
+    // 2. End on this date  
+    // 3. Are completed on this date
+    // 4. Are created on this date
+    // 5. Span across this date (multi-day tasks)
+    const startMatch = taskStartDate === date;
+    const endMatch = taskEndDate === date;
+    const completedMatch = taskCompletedDate === date;
+    const createdMatch = taskCreatedDate === date;
+    const spansMatch = taskStartDate <= date && taskEndDate >= date;
+    
+    return startMatch || endMatch || completedMatch || createdMatch || spansMatch;
   });
 
-  const completedTasks = dayTasks.filter(task => 
-    task.completed && task.completedAt && 
-    new Date(task.completedAt).toISOString().split('T')[0] === date
-  );
+  // Tasks completed specifically on this date - Use proper date extraction
+  const completedTasks = dayTasks.filter(task => {
+    if (!task.completed) return false;
+    
+    // If task is completed but has no completedAt timestamp, 
+    // treat it as completed on the task's end date
+    if (!task.completedAt) {
+      return task.endDate === date;
+    }
+    
+    // Normal case: task has completedAt timestamp
+    const completedDate = new Date(task.completedAt).toISOString().split('T')[0];
+    return completedDate === date;
+  });
 
-  const createdTasks = dayTasks.filter(task => 
-    new Date(task.createdAt).toISOString().split('T')[0] === date
-  );
+  // Tasks that were scheduled/active on this date (not just created)
+  const activeTasks = dayTasks.filter(task => {
+    const taskStartDate = task.startDate;
+    const taskEndDate = task.endDate;
+    return taskStartDate <= date && taskEndDate >= date;
+  });
 
+  // Tasks that became overdue on this date
   const overdueTasks = dayTasks.filter(task => 
-    !task.completed && new Date(`${task.endDate}T${task.endTime}`) < new Date(date)
+    !task.completed && task.endDate < date
   );
 
-  const completionRate = createdTasks.length > 0 
-    ? Math.round((completedTasks.length / createdTasks.length) * 100) 
+  const completionRate = activeTasks.length > 0 
+    ? Math.round((completedTasks.length / activeTasks.length) * 100) 
     : 0;
 
   const priorityBreakdown = {
@@ -59,7 +89,7 @@ export const generateDailyReport = (tasks: Task[], date: string): DailyReport =>
   return {
     date,
     tasksCompleted: completedTasks.length,
-    tasksCreated: createdTasks.length,
+    tasksCreated: activeTasks.length, // Changed from createdTasks to activeTasks
     tasksOverdue: overdueTasks.length,
     completionRate,
     priorityBreakdown,
@@ -88,13 +118,20 @@ export const generateWeeklyReport = (tasks: Task[], weekStart: string): WeeklyRe
     dailyReports.reduce((sum, day) => sum + day.completionRate, 0) / 7
   );
 
-  const bestDay = dailyReports.reduce((best, current) => 
-    current.productivityScore > best.productivityScore ? current : best
-  ).date;
+  // Handle edge cases for best/worst day when all days have same score or no tasks
+  const validDays = dailyReports.filter(day => day.tasksCompleted > 0 || day.tasksCreated > 0);
+  
+  const bestDay = validDays.length > 0 
+    ? validDays.reduce((best, current) => 
+        current.productivityScore > best.productivityScore ? current : best
+      ).date
+    : dailyReports[0].date; // Fallback to first day if no valid days
 
-  const worstDay = dailyReports.reduce((worst, current) => 
-    current.productivityScore < worst.productivityScore ? current : worst
-  ).date;
+  const worstDay = validDays.length > 0
+    ? validDays.reduce((worst, current) => 
+        current.productivityScore < worst.productivityScore ? current : worst
+      ).date
+    : dailyReports[6].date; // Fallback to last day if no valid days
 
   const weeklyProductivityScore = Math.round(
     dailyReports.reduce((sum, day) => sum + day.productivityScore, 0) / 7
@@ -135,38 +172,49 @@ export const generateMonthlyReport = (tasks: Task[], month: number, year: number
 
   const totalCompleted = weeklyReports.reduce((sum, week) => sum + week.totalTasksCompleted, 0);
   const totalCreated = weeklyReports.reduce((sum, week) => sum + week.totalTasksCreated, 0);
-  const averageCompletionRate = Math.round(
+  const averageCompletionRate = weeklyReports.length > 0 ? Math.round(
     weeklyReports.reduce((sum, week) => sum + week.averageCompletionRate, 0) / weeklyReports.length
-  );
+  ) : 0;
 
-  const bestWeek = weeklyReports.reduce((best, current) => 
-    current.weeklyProductivityScore > best.weeklyProductivityScore ? current : best
-  ).weekStart;
+  // Handle edge cases for best/worst week when all weeks have same score or no tasks
+  const validWeeks = weeklyReports.filter(week => week.totalTasksCompleted > 0 || week.totalTasksCreated > 0);
 
-  const worstWeek = weeklyReports.reduce((worst, current) => 
-    current.weeklyProductivityScore < worst.weeklyProductivityScore ? current : worst
-  ).weekStart;
+  const bestWeek = validWeeks.length > 0
+    ? validWeeks.reduce((best, current) => 
+        current.weeklyProductivityScore > best.weeklyProductivityScore ? current : best
+      ).weekStart
+    : weeklyReports.length > 0 ? weeklyReports[0].weekStart : monthStart.toISOString().split('T')[0];
 
-  const monthlyProductivityScore = Math.round(
+  const worstWeek = validWeeks.length > 0
+    ? validWeeks.reduce((worst, current) => 
+        current.weeklyProductivityScore < worst.weeklyProductivityScore ? current : worst
+      ).weekStart
+    : weeklyReports.length > 0 ? weeklyReports[weeklyReports.length - 1].weekStart : monthStart.toISOString().split('T')[0];
+
+  const monthlyProductivityScore = weeklyReports.length > 0 ? Math.round(
     weeklyReports.reduce((sum, week) => sum + week.weeklyProductivityScore, 0) / weeklyReports.length
-  );
+  ) : 0;
 
   // Determine monthly trend
   const firstHalf = weeklyReports.slice(0, Math.floor(weeklyReports.length / 2));
   const secondHalf = weeklyReports.slice(Math.floor(weeklyReports.length / 2));
-  const firstHalfAvg = firstHalf.reduce((sum, week) => sum + week.weeklyProductivityScore, 0) / firstHalf.length;
-  const secondHalfAvg = secondHalf.reduce((sum, week) => sum + week.weeklyProductivityScore, 0) / secondHalf.length;
+  const firstHalfAvg = firstHalf.length > 0 ? firstHalf.reduce((sum, week) => sum + week.weeklyProductivityScore, 0) / firstHalf.length : 0;
+  const secondHalfAvg = secondHalf.length > 0 ? secondHalf.reduce((sum, week) => sum + week.weeklyProductivityScore, 0) / secondHalf.length : 0;
   
   const monthlyTrend = secondHalfAvg > firstHalfAvg + 5 ? 'improving' : 
                       secondHalfAvg < firstHalfAvg - 5 ? 'declining' : 'stable';
 
   // Calculate category insights
   const allDailyReports = weeklyReports.flatMap(week => week.dailyBreakdown);
-  const mostProductiveDay = allDailyReports.reduce((best, current) => 
-    current.productivityScore > best.productivityScore ? current : best
-  ).date;
+  const validDailyReports = allDailyReports.filter(day => day.tasksCompleted > 0 || day.tasksCreated > 0);
+  
+  const mostProductiveDay = validDailyReports.length > 0
+    ? validDailyReports.reduce((best, current) => 
+        current.productivityScore > best.productivityScore ? current : best
+      ).date
+    : allDailyReports.length > 0 ? allDailyReports[0].date : monthStart.toISOString().split('T')[0];
 
-  const averageTasksPerDay = Math.round(totalCompleted / allDailyReports.length);
+  const averageTasksPerDay = allDailyReports.length > 0 ? Math.round(totalCompleted / allDailyReports.length) : 0;
 
   return {
     month: monthStart.toLocaleDateString('en-US', { month: 'long' }),
@@ -175,7 +223,7 @@ export const generateMonthlyReport = (tasks: Task[], month: number, year: number
     totalTasksCreated: totalCreated,
     averageCompletionRate,
     bestWeek,
-    worstWeek,
+    worstWeek: worstWeek,
     monthlyTrend,
     monthlyProductivityScore,
     weeklyBreakdown: weeklyReports,
