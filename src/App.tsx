@@ -112,7 +112,7 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
         <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
@@ -122,17 +122,17 @@ function App() {
                     <Target className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold text-gray-900">SimplyTask</h1>
-                    <p className="text-xs text-gray-600">Executive Productivity Suite</p>
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900">SimplyTask</h1>
+                    <p className="text-xs text-gray-600 hidden sm:block">Executive Productivity Suite</p>
                   </div>
                 </div>
               </div>
             
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 sm:gap-4">
                 <div className="flex bg-gray-100 rounded-xl p-1 shadow-inner">
                   <button
                     onClick={() => setViewMode('list')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                    className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 ${
                       viewMode === 'list'
                         ? 'bg-white text-gray-900 shadow-md'
                         : 'text-gray-600 hover:text-gray-900'
@@ -143,7 +143,7 @@ function App() {
                   </button>
                   <button
                     onClick={() => setViewMode('calendar')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                    className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 ${
                       viewMode === 'calendar'
                         ? 'bg-white text-gray-900 shadow-md'
                         : 'text-gray-600 hover:text-gray-900'
@@ -154,7 +154,7 @@ function App() {
                   </button>
                   <button
                     onClick={() => setViewMode('reports')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                    className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 ${
                       viewMode === 'reports'
                         ? 'bg-white text-gray-900 shadow-md'
                         : 'text-gray-600 hover:text-gray-900'
@@ -164,43 +164,36 @@ function App() {
                     <span className="hidden sm:inline">Reports</span>
                   </button>
                 </div>
-              
-                <button
-                  onClick={exportTasks}
-                  className="hidden md:flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200"
-                >
-                  <Download size={16} />
-                  <span className="hidden lg:inline">Export</span>
-                </button>
-              
-                <button
-                  onClick={handleSignOut}
-                  className="hidden md:flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
-                >
-                  <LogOut size={16} />
-                  <span className="hidden lg:inline">Sign Out</span>
-                </button>
-              
+                
                 <button
                   onClick={() => setShowTaskForm(true)}
-                  className="flex items-center gap-2 px-4 lg:px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold shadow-md hover:shadow-lg transition-all duration-200"
+                  className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 text-sm sm:text-base"
                 >
-                  <Plus size={16} />
+                  <Plus size={16} className="sm:hidden" />
+                  <Plus size={20} className="hidden sm:block" />
                   <span className="hidden sm:inline">New Task</span>
+                </button>
+                
+                <button
+                  onClick={handleSignOut}
+                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all duration-200"
+                  title="Sign Out"
+                >
+                  <LogOut size={20} />
                 </button>
               </div>
             </div>
           </div>
         </header>
 
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 w-full">
           {globalError && (
             <div className="mb-6">
               <ErrorAlert error={globalError} onDismiss={clearGlobalError} />
             </div>
           )}
           
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
             {viewMode !== 'reports' && <TaskStats tasks={tasks} />}
           
             {viewMode === 'list' && (
@@ -215,38 +208,28 @@ function App() {
                   taskCounts={taskCounts}
                 />
               
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {tasksLoading ? (
-                    <div className="text-center py-20 bg-white rounded-xl shadow-sm border border-gray-200">
-                      <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-6" />
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading your tasks...</h3>
-                      <p className="text-gray-600">Please wait while we fetch your data</p>
+                    <div className="text-center py-12">
+                      <LoadingPage message="Loading tasks..." />
                     </div>
                   ) : filteredTasks.length === 0 ? (
-                    <div className="text-center py-20 bg-white rounded-xl shadow-sm border border-gray-200">
-                      <div className="text-gray-400 mb-6">
-                        <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <List size={48} />
-                        </div>
-                      </div>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                        {searchQuery ? 'No tasks found' : 'No tasks yet'}
-                      </h3>
+                    <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-gray-200">
+                      <Target className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No tasks found</h3>
                       <p className="text-gray-600 mb-6">
-                        {searchQuery 
-                          ? 'Try adjusting your search or filters'
-                          : 'Create your first task to get started'
+                        {activeFilter === 'all' 
+                          ? "Get started by creating your first task!" 
+                          : `No ${activeFilter} tasks at the moment.`
                         }
                       </p>
-                      {!searchQuery && (
-                        <button
-                          onClick={() => setShowTaskForm(true)}
-                          className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold shadow-md hover:shadow-lg transition-all duration-200"
-                        >
-                          <Plus size={16} />
-                          Create Your First Task
-                        </button>
-                      )}
+                      <button
+                        onClick={() => setShowTaskForm(true)}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                      >
+                        <Plus size={20} />
+                        Create New Task
+                      </button>
                     </div>
                   ) : (
                     filteredTasks.map(task => (

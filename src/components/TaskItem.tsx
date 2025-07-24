@@ -48,213 +48,210 @@ export const TaskItem: React.FC<TaskItemProps> = ({
         : task.completed 
         ? 'border-green-200 bg-green-50/30' 
         : 'border-gray-200'
-    } ${task.isOverdue ? 'ring-1 ring-red-200' : ''}`}>
+    }`}>
       {error && (
-        <div className="p-4 pb-0">
+        <div className="p-4 border-b border-gray-200">
           <ErrorAlert error={error} onDismiss={onClearError} />
         </div>
       )}
       
-      <div className="p-6">
-        <div className="flex items-start gap-3">
+      <div className="p-4 sm:p-6">
+        <div className="flex items-start gap-3 sm:gap-4">
           <button
             onClick={handleToggleComplete}
             disabled={isUpdating}
-            className={`mt-1 transition-all duration-200 disabled:opacity-50 ${
-              task.completed 
-                ? 'text-green-600' 
-                : 'text-gray-400 hover:text-green-600 hover:scale-105'
+            className={`flex-shrink-0 mt-1 p-1 rounded-full transition-all duration-200 hover:scale-110 touch-manipulation ${
+              task.completed ? 'text-green-600' : 'text-gray-400 hover:text-green-600'
             }`}
           >
-            {isUpdating ? (
-              <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
-            ) : task.completed ? (
-              <CheckCircle2 size={20} />
+            {task.completed ? (
+              <CheckCircle2 size={20} className="sm:w-6 sm:h-6" />
             ) : (
-              <Circle size={20} />
+              <Circle size={20} className="sm:w-6 sm:h-6" />
             )}
           </button>
-          
+
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between">
-              <h3 className={`font-semibold text-lg leading-tight ${
-                task.completed ? 'line-through text-gray-500' : 'text-gray-900'
-              }`}>
-                {task.title}
-              </h3>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => onEdit(task)}
-                  className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
-                >
-                  <Edit3 size={16} />
-                </button>
-                <button
-                  onClick={() => onDelete(task.id)}
-                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </div>
-            
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span 
-                className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${
-                  task.category === 'custom' && task.customCategoryColor
-                    ? 'text-white border-opacity-50'
-                    : getCategoryColor(task.category)
-                }`}
-                style={task.category === 'custom' && task.customCategoryColor ? {
-                  backgroundColor: task.customCategoryColor,
-                  borderColor: task.customCategoryColor
-                } : {}}
-              >
-                {task.category === 'custom' ? task.customCategoryName : task.category}
-              </span>
-              <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${getPriorityColor(task.priority)}`}>
-                {task.priority}
-              </span>
-              {task.isRecurring && (
-                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
-                  <Repeat size={12} className="mr-1" />
-                  Recurring
-                </span>
-              )}
-              {task.delegatedTo && (
-                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
-                  <Users size={12} className="mr-1" />
-                  Delegated
-                </span>
-              )}
-              {task.approvalRequired && (
-                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
-                  <Shield size={12} className="mr-1" />
-                  Approval Required
-                </span>
-              )}
-              {task.isOverdue && !task.completed && (
-                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-red-100 text-red-800 border border-red-200">
-                  <AlertTriangle size={12} className="mr-1" />
-                  Overdue
-                </span>
-              )}
-            </div>
-            
-            <div className="mt-3 flex items-center gap-4 text-sm text-gray-600">
-              <div className={`flex items-center gap-1 ${getDueDateStatus()}`}>
-                <Calendar size={14} />
-                <span>{formatDateTimeRange(task.startDate, task.startTime, task.endDate, task.endTime)}</span>
-                {!task.completed && (
-                  <span className="ml-1 font-medium">
-                    ({daysUntilDue > 0 ? `${daysUntilDue} days left` : daysUntilDue === 0 ? 'Today' : `${Math.abs(daysUntilDue)} days overdue`})
+            <div className="flex items-start justify-between gap-2 sm:gap-4 mb-3">
+              <div className="flex-1 min-w-0">
+                <h3 className={`text-base sm:text-lg font-semibold transition-all duration-200 ${
+                  task.completed ? 'text-gray-500 line-through' : 'text-gray-900'
+                }`}>
+                  {task.title}
+                </h3>
+                
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(task.priority)}`}>
+                    {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)} Priority
                   </span>
-                )}
-              </div>
-            </div>
-
-            {(task.notes || task.links.length > 0) && (
-              <button
-                onClick={() => setShowDetails(!showDetails)}
-                className="mt-4 text-sm text-blue-600 hover:text-blue-700 flex items-center gap-2 font-medium hover:bg-blue-50 px-3 py-2 rounded-lg transition-all duration-200"
-              >
-                {showDetails ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                {showDetails ? 'Hide details' : 'Show details'}
-              </button>
-            )}
-
-            {showDetails && (
-              <div className="mt-4 space-y-4 border-t border-gray-200 pt-4 bg-gray-50/50 -mx-6 px-6 pb-4 rounded-b-xl">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {task.department && (
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900 mb-1">Department</h4>
-                      <p className="text-sm text-gray-700 bg-white px-2 py-1 rounded border">{task.department}</p>
-                    </div>
+                  
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getCategoryColor(task.category)}`}>
+                    {task.customCategoryName || task.category.charAt(0).toUpperCase() + task.category.slice(1)}
+                  </span>
+                  
+                  {task.isRecurring && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium border border-purple-200">
+                      <Repeat size={12} />
+                      Recurring
+                    </span>
                   )}
-                  {task.estimatedHours && (
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900 mb-1">Estimated Time</h4>
-                      <p className="text-sm text-gray-700 flex items-center gap-1 bg-white px-2 py-1 rounded border">
-                        <Clock size={14} />
-                        {task.estimatedHours} hours
-                      </p>
-                    </div>
-                  )}
-                  {task.budgetImpact && task.budgetImpact !== 'none' && (
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900 mb-1">Budget Impact</h4>
-                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${getBudgetImpactColor(task.budgetImpact)}`}>
-                        <DollarSign size={12} />
-                        {task.budgetImpact}
-                      </span>
-                    </div>
-                  )}
-                  {task.riskLevel && task.riskLevel !== 'low' && (
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900 mb-1">Risk Level</h4>
-                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${getRiskLevelColor(task.riskLevel)}`}>
-                        <AlertTriangle size={12} />
-                        {task.riskLevel}
-                      </span>
-                    </div>
+                  
+                  {task.delegatedTo && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
+                      <Users size={12} />
+                      Delegated
+                    </span>
                   )}
                 </div>
+              </div>
+
+              <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                <button
+                  onClick={() => setShowDetails(!showDetails)}
+                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200 touch-manipulation"
+                  title={showDetails ? "Hide details" : "Show details"}
+                >
+                  {showDetails ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                </button>
+                
+                <button
+                  onClick={() => onEdit(task)}
+                  className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 touch-manipulation"
+                  title="Edit task"
+                >
+                  <Edit3 size={18} />
+                </button>
+                
+                <button
+                  onClick={() => onDelete(task.id)}
+                  className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 touch-manipulation"
+                  title="Delete task"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-600">
+              <div className="flex items-center gap-1">
+                <Calendar size={14} />
+                <span className={getDueDateStatus()}>
+                  {formatDateTimeRange(task.startDate, task.startTime, task.endDate, task.endTime)}
+                </span>
+              </div>
+              
+              {task.estimatedHours && (
+                <div className="flex items-center gap-1">
+                  <Clock size={14} />
+                  <span>{task.estimatedHours}h estimated</span>
+                </div>
+              )}
+              
+              {taskIsOverdue && !task.completed && (
+                <div className="flex items-center gap-1 text-red-600">
+                  <AlertTriangle size={14} />
+                  <span className="font-medium">Overdue</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {showDetails && (
+          <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
+            {task.notes && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                  <FileText size={14} />
+                  Notes
+                </h4>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                  {task.notes}
+                </p>
+              </div>
+            )}
+
+            {(task.department || task.delegatedTo || task.budgetImpact !== 'none' || task.riskLevel !== 'low') && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {task.department && (
+                  <div>
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Department</span>
+                    <p className="text-sm text-gray-900 mt-1">{task.department}</p>
+                  </div>
+                )}
+                
                 {task.delegatedTo && (
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-900 mb-1">Delegated To</h4>
-                    <p className="text-sm text-gray-700 flex items-center gap-1 bg-white px-2 py-1 rounded border">
-                      <Users size={14} />
-                      {task.delegatedTo}
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Delegated To</span>
+                    <p className="text-sm text-gray-900 mt-1">{task.delegatedTo}</p>
+                  </div>
+                )}
+                
+                {task.budgetImpact !== 'none' && (
+                  <div>
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Budget Impact</span>
+                    <p className={`text-sm mt-1 inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getBudgetImpactColor(task.budgetImpact)}`}>
+                      <DollarSign size={12} />
+                      {task.budgetImpact.charAt(0).toUpperCase() + task.budgetImpact.slice(1)}
                     </p>
                   </div>
                 )}
-                {task.stakeholders && task.stakeholders.length > 0 && (
+                
+                {task.riskLevel !== 'low' && (
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Key Stakeholders</h4>
-                    <div className="flex flex-wrap gap-1">
-                      {task.stakeholders.map((stakeholder) => (
-                        <span
-                          key={stakeholder}
-                          className="inline-flex items-center px-3 py-1 bg-white text-gray-700 rounded-full text-xs border font-medium"
-                        >
-                          {stakeholder}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {task.notes && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Notes</h4>
-                    <div className="bg-white p-3 rounded border">
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{task.notes}</p>
-                    </div>
-                  </div>
-                )}
-                {task.links.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Links</h4>
-                    <div className="space-y-2">
-                      {task.links.map((link) => (
-                        <a
-                          key={link.id}
-                          href={link.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 bg-white p-2 rounded border hover:bg-blue-50 transition-colors"
-                        >
-                          <ExternalLink size={14} />
-                          {link.title || link.url}
-                        </a>
-                      ))}
-                    </div>
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Risk Level</span>
+                    <p className={`text-sm mt-1 inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getRiskLevelColor(task.riskLevel)}`}>
+                      <Shield size={12} />
+                      {task.riskLevel.charAt(0).toUpperCase() + task.riskLevel.slice(1)}
+                    </p>
                   </div>
                 )}
               </div>
             )}
+
+            {task.stakeholders && task.stakeholders.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                  <Users size={14} />
+                  Stakeholders
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {task.stakeholders.map((stakeholder, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium"
+                    >
+                      {stakeholder}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {task.links && task.links.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                  <ExternalLink size={14} />
+                  Related Links
+                </h4>
+                <div className="space-y-2">
+                  {task.links.map((link) => (
+                    <a
+                      key={link.id}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 p-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all duration-200 group touch-manipulation"
+                    >
+                      <ExternalLink size={14} className="flex-shrink-0" />
+                      <span className="group-hover:underline truncate">{link.title}</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

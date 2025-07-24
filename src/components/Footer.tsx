@@ -3,12 +3,12 @@ import { Heart } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="bg-white border-t border-gray-200 py-6 mt-12">
+    <footer className="bg-white border-t border-gray-200 py-4 sm:py-6 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center">
-          <p className="text-sm text-gray-600 flex items-center justify-center gap-2">
+          <p className="text-xs sm:text-sm text-gray-600 flex items-center justify-center gap-2">
             Developed with 
-            <Heart className="w-4 h-4 text-red-500 fill-current" />
+            <Heart className="w-3 h-3 sm:w-4 sm:h-4 text-red-500 fill-current" />
             by{' '}
             <a 
               href="https://vinamrasharma.com/" 
