@@ -31,6 +31,10 @@ interface ParsedTaskResponse {
   question?: string;
   task?: any;
   conflicts?: any[];
+  conversationType?: string; // Added for conversational responses
+  response?: string; // Added for conversational responses
+  suggestion?: string; // Added for conversational responses
+  followUp?: boolean; // Added for conversational responses
 }
 
 export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({ 
@@ -110,6 +114,25 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
 
       const data: ParsedTaskResponse = await response.json();
       
+      // Handle different response types
+      if (data.conversationType) {
+        // Handle conversational responses
+        addMessage('assistant', data.response || data.message || 'I understand!');
+        
+        if (data.suggestion) {
+          setTimeout(() => {
+            addMessage('assistant', data.suggestion);
+          }, 1000);
+        }
+        
+        if (data.followUp) {
+          setConversationContext(prev => `${prev}\nUser: ${userInput}\nAssistant: ${data.response || ''}`);
+        }
+        
+        return; // Don't process as scheduling task
+      }
+      
+      // Handle scheduling responses
       switch (data.status) {
         case 'need_more_info':
           addMessage('assistant', data.question || 'Could you provide more details?');
@@ -193,12 +216,14 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
   };
 
   const quickSuggestions = [
+    "Hey Donna! How are you?",
+    "What can you help me with?",
     "Schedule a meeting with the team at 2 PM today",
     "I need to work on the presentation tomorrow",
+    "I'm feeling overwhelmed with my schedule",
     "Block time for deep work this afternoon",
     "Set up a call with the client this week",
-    "Plan a team lunch next Friday",
-    "Add time to review the budget proposal"
+    "How should I prioritize my tasks?"
   ];
 
   if (!showConversation && !isExpanded) {

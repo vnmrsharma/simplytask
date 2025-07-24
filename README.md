@@ -23,6 +23,8 @@ You'll need a couple of free accounts:
 - **Supabase** (for storing your tasks) - Sign up at [supabase.com](https://supabase.com)
 - **OpenAI** (for the smart task creation) - Get an API key at [platform.openai.com](https://platform.openai.com)
 
+**Important**: When deploying to Vercel, make sure to add these same environment variables in your project settings!
+
 ### Step 2: Set up your environment
 Create a file called `.env.local` in the main folder and add your keys:
 

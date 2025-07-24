@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "api/nlp-task-create.ts": {
+      "maxDuration": 30
+    }
+  },
+  "regions": ["iad1"]
+} 
