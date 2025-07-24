@@ -569,15 +569,10 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
         }),
       });
 
-      console.log('API response received:', response.status, response.statusText);
-
-      if (!response.ok) {
-        throw new Error(`API call failed: ${response.status} ${response.statusText}`);
-      }
-
-      const data: ParsedTaskResponse = await response.json();
+      console.log('API response received:', response.status);
+      const data = await response.json();
       console.log('Parsed response data:', data);
-      
+
       // Handle different response types
       if (data.conversationType) {
         console.log('Handling conversational response:', data.conversationType);
@@ -597,7 +592,9 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
         // Handle conversational responses
         else if (data.conversationType === 'scheduling') {
           // This is a scheduling response - treat it like a parsed task
+          console.log('Processing scheduling response with data:', data);
           if (data.title) {
+            console.log('Task data found, creating task...');
             // First show the assistant's helpful message if available
             if (data.assistantMessage) {
               addMessage('assistant', data.assistantMessage);
@@ -619,7 +616,9 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
               participants: data.participants || [],
             };
             
+            console.log('Calling onCreateTask with:', taskData);
             await onCreateTask(taskData);
+            console.log('onCreateTask completed');
             
             // Add a confirmation message
             addMessage('assistant', `✅ All set! "${data.title}" is now in your calendar for ${formatDate(data.startDate!)} at ${formatTime(data.startTime!)}.`);
@@ -634,6 +633,7 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
               }
             }, 4000);
           } else {
+            console.log('No task title found in scheduling response');
             addMessage('assistant', 'I had trouble understanding the task details. Could you try rephrasing?');
           }
         } else {
@@ -663,7 +663,58 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
             }
           } else {
             // Handle general conversational responses
-            addMessage('assistant', data.response || data.message || 'I understand!');
+            const response = data.response || data.message || 'I understand!';
+            addMessage('assistant', response);
+            
+            // Check if this is a conversational response that mentions task creation
+            // This is a fallback for when the AI responds conversationally but intends to create a task
+            if (response.toLowerCase().includes('add') && response.toLowerCase().includes('task') ||
+                response.toLowerCase().includes('created') || response.toLowerCase().includes('scheduled') ||
+                response.toLowerCase().includes('successfully added')) {
+              
+              console.log('Detected task creation intent in conversational response, requesting proper task format...');
+              
+              // Send a follow-up request asking for the task details in proper format
+              setTimeout(async () => {
+                try {
+                  const followUpResponse = await fetch('/api/nlp-task-create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      inputText: 'Please provide the task details in scheduling format for the task you just mentioned creating',
+                      existingTasks: tasks || [],
+                      conversationContext: conversationContext + `\nUser: ${userInput}\nAssistant: ${response}`
+                    })
+                  });
+                  
+                  if (followUpResponse.ok) {
+                    const followUpData = await followUpResponse.json();
+                    console.log('Follow-up response:', followUpData);
+                    
+                    if (followUpData.conversationType === 'scheduling' && followUpData.title) {
+                      console.log('Got proper scheduling format in follow-up, creating task...');
+                      const taskData = {
+                        title: followUpData.title,
+                        description: followUpData.description || '',
+                        startDate: followUpData.startDate!,
+                        endDate: followUpData.endDate!,
+                        startTime: followUpData.startTime!,
+                        endTime: followUpData.endTime!,
+                        priority: followUpData.priority || 'medium',
+                        category: followUpData.category || 'personal',
+                        estimatedHours: followUpData.estimatedHours || 1,
+                        participants: followUpData.participants || [],
+                      };
+                      
+                      await onCreateTask(taskData);
+                      addMessage('assistant', `✅ Task "${followUpData.title}" has been added to your schedule!`);
+                    }
+                  }
+                } catch (error) {
+                  console.error('Follow-up request failed:', error);
+                }
+              }, 1000);
+            }
           }
           
           if (data.suggestion) {
