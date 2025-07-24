@@ -284,8 +284,10 @@ export function useAuth() {
     return handleAsync(async () => {
       const { error } = await supabase.auth.signOut();
       if (error) {
+        console.error('Supabase signOut error:', error);
         setError('general', 'Sign out failed', error.message, ['Try refreshing the page']);
-        throw error;
+        // Don't throw error - user should still be logged out from UI perspective
+        return;
       }
     }, 'Failed to sign out');
   };

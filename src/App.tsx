@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Calendar, List, Download, Target, BarChart3, LogOut } from 'lucide-react';
+import { Plus, Calendar, List, Download, Target, BarChart3, LogOut, AlertTriangle } from 'lucide-react';
 import { Task, ViewMode, FilterType, SortType } from './types/Task';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoadingPage } from './components/LoadingSpinner';
@@ -27,6 +27,7 @@ function App() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [sortBy, setSortBy] = useState<SortType>('priority');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSigningOut, setIsSigningOut] = useState(false); // Add loading state for logout
 
   // Global error state
   const globalError = authError || tasksError;
@@ -66,6 +67,9 @@ function App() {
   if (!user) {
     return <AuthForm />;
   }
+
+  // Add a try-catch wrapper around the main app content
+  try {
 
   const handleCreateTask = (taskData: Omit<Task, 'id' | 'createdAt'>) => {
     createTask(taskData);
@@ -113,7 +117,16 @@ function App() {
   };
 
   const handleSignOut = async () => {
-    await signOut();
+    try {
+      setIsSigningOut(true);
+      await signOut();
+    } catch (error) {
+      console.error('Sign out error:', error);
+      // Even if there's an error, we can still clear local state and redirect
+      // The user should be logged out from the UI perspective
+    } finally {
+      setIsSigningOut(false);
+    }
   };
 
   return (
@@ -184,8 +197,13 @@ function App() {
                   onClick={handleSignOut}
                   className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all duration-200"
                   title="Sign Out"
+                  disabled={isSigningOut}
                 >
-                  <LogOut size={20} />
+                  {isSigningOut ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600"></div>
+                  ) : (
+                    <LogOut size={20} />
+                  )}
                 </button>
               </div>
             </div>
@@ -295,6 +313,24 @@ function App() {
       </div>
     </ErrorBoundary>
   );
+  } catch (error: any) {
+    console.error('App component error:', error);
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center max-w-md">
+          <AlertTriangle className="h-12 w-12 text-red-600 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-red-800 mb-2">Application Error</h2>
+          <p className="text-red-700 mb-4">Something went wrong. Please refresh the page to continue.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
+  }
 }
 
 export default App;
