@@ -662,9 +662,35 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
               addMessage('assistant', data.response || 'Let me check your schedule...');
             }
           } else {
-            // Handle general conversational responses
-            const response = data.response || data.message || 'I understand!';
-            addMessage('assistant', response);
+            // Handle specific conversation types
+            if (data.conversationType === 'greeting') {
+              const response = data.response || "Hi! I'm Donna, your scheduling assistant. What would you like to work on today?";
+              addMessage('assistant', response);
+              if (data.assistantMessage) {
+                setTimeout(() => addMessage('assistant', data.assistantMessage), 1000);
+              }
+            } else if (data.conversationType === 'casual') {
+              const response = data.response || "I'm here and ready to help!";
+              addMessage('assistant', response);
+              if (data.assistantMessage) {
+                setTimeout(() => addMessage('assistant', data.assistantMessage), 1500);
+              }
+            } else if (data.conversationType === 'supportive') {
+              const response = data.response || "I understand, and I'm here to help you get organized!";
+              addMessage('assistant', response);
+              if (data.assistantMessage) {
+                setTimeout(() => addMessage('assistant', data.assistantMessage), 1500);
+              }
+            } else if (data.conversationType === 'capabilities') {
+              const response = data.response || "I can help you with scheduling, task management, and calendar optimization!";
+              addMessage('assistant', response);
+              if (data.assistantMessage) {
+                setTimeout(() => addMessage('assistant', data.assistantMessage), 1500);
+              }
+            } else {
+              // Handle general conversational responses
+              const response = data.response || data.message || 'I understand!';
+              addMessage('assistant', response);
             
             // Check if this is a conversational response that mentions task creation
             // This is a fallback for when the AI responds conversationally but intends to create a task
@@ -727,6 +753,7 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
             setConversationContext(prev => `${prev}\nUser: ${userInput}\nAssistant: ${data.response || ''}`);
           }
         }
+      }
         
         // Handle advanced conflict resolution
         if (data.conflictDetected && data.conflictOptions) {
@@ -821,18 +848,18 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
   };
 
   const quickSuggestions = [
-    "Hey Donna! How are you?",
-    "What do I have tomorrow?", 
-    "Schedule a meeting with the team at 2 PM today",
-    "Move my 3pm meeting to 4pm",
+    "Hey Donna! 👋",
+    "How are you doing?",
     "What can you help me with?",
-    "Cancel my 2pm call",
-    "When am I free this week?",
-    "Find me 2 hours for deep work",
+    "Schedule a meeting with the team at 2 PM today",
     "I'm feeling overwhelmed with my schedule",
+    "What do I have tomorrow?", 
+    "When am I free this week?",
+    "Cancel my 2pm call",
+    "Move my 3pm meeting to 4pm",
+    "Find me 2 hours for deep work",
     "Reorganize my afternoon",
-    "Block time for deep work this afternoon",
-    "How should I prioritize my tasks?"
+    "Block time for deep work this afternoon"
   ];
 
   if (!showConversation && !isExpanded) {
