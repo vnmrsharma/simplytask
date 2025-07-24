@@ -76,13 +76,15 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
   onClose, 
   isExpanded = false 
 }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [conversation, setConversation] = useState<ConversationMessage[]>([]);
-  const [conversationContext, setConversationContext] = useState('');
   const [pendingTask, setPendingTask] = useState<any>(null);
-  const [showConversation, setShowConversation] = useState(isExpanded);
   const [pendingAction, setPendingAction] = useState<any>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [showConversation, setShowConversation] = useState(isExpanded);
+  const [conversation, setConversation] = useState<Array<{ role: 'user' | 'assistant'; content: string; timestamp: Date }>>([]);
+  const [conversationContext, setConversationContext] = useState('');
+  const [operationStatus, setOperationStatus] = useState<string>(''); // Add operation status
 
   // Helper functions
   const formatDate = (dateStr: string): string => {
@@ -119,7 +121,7 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
     setConversation(prev => [...prev, { type, content, timestamp: new Date() }]);
   };
 
-  const handleTaskManagementAction = async (data: ParsedTaskResponse) => {
+  const handleTaskManagementAction = async (data: ParsedTaskResponse, skipConfirmation = false) => {
     switch (data.action) {
       case 'delete':
         if (data.searchCriteria) {
@@ -128,6 +130,19 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
           
           if (tasksToDelete.length === 0) {
             addMessage('assistant', "I couldn't find any tasks matching that description. Could you be more specific?");
+            return;
+          }
+          
+          // If skipConfirmation is true (from complex confirmation), directly delete
+          if (skipConfirmation) {
+            try {
+              for (const task of tasksToDelete) {
+                await onDeleteTask(task.id);
+              }
+              addMessage('assistant', `✅ Successfully cancelled ${tasksToDelete.length} task${tasksToDelete.length > 1 ? 's' : ''}!`);
+            } catch (error) {
+              addMessage('assistant', '❌ Sorry, I had trouble cancelling some tasks. Please try again.');
+            }
             return;
           }
           
@@ -368,6 +383,24 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
       addMessage('assistant', data.response);
     }
     
+    // Check if confirmation is needed before executing actions
+    if (data.confirmationNeeded && data.actions && data.actions.length > 0) {
+      // Store the actions for later execution and show confirmation
+      setPendingAction({
+        type: 'complex_confirmation',
+        actions: data.actions,
+        message: data.assistantMessage || 'Would you like me to proceed with these changes?'
+      });
+      
+      if (data.assistantMessage) {
+        setTimeout(() => {
+          addMessage('assistant', data.assistantMessage);
+        }, 1000);
+      }
+      return; // Don't execute actions yet, wait for confirmation
+    }
+    
+    // If no confirmation needed, execute actions immediately
     if (data.actions && data.actions.length > 0) {
       // Sort actions by priority if specified
       const sortedActions = data.actions.sort((a, b) => (a.priority || 1) - (b.priority || 1));
@@ -381,11 +414,11 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
           taskData: action.taskData,
           response: action.description
         };
-        await handleTaskManagementAction(actionData);
+        await handleTaskManagementAction(actionData, false); // Pass false for normal flow
       }
     }
     
-    if (data.assistantMessage) {
+    if (data.assistantMessage && !data.confirmationNeeded) {
       setTimeout(() => {
         addMessage('assistant', data.assistantMessage);
       }, 1000);
@@ -395,15 +428,6 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
       setTimeout(() => {
         addMessage('assistant', `💡 **Schedule Analysis:** ${data.scheduleAnalysis}`);
       }, 2000);
-    }
-    
-    if (data.confirmationNeeded) {
-      // Set up confirmation flow if needed
-      setPendingAction({
-        type: 'complex_confirmation',
-        actions: data.actions,
-        message: data.assistantMessage || 'Would you like me to proceed with these changes?'
-      });
     }
   };
 
@@ -490,27 +514,38 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
 
   const handleComplexConfirmation = async () => {
     if (pendingAction?.actions) {
-      for (const action of pendingAction.actions) {
-        const actionData = {
-          action: action.type,
-          searchCriteria: action.searchCriteria,
-          taskData: action.taskData,
-          response: action.description
-        };
-        await handleTaskManagementAction(actionData);
+      setOperationStatus('🔄 Executing your request...');
+      addMessage('assistant', '🔄 Processing your request...');
+      
+      try {
+        for (const action of pendingAction.actions) {
+          const actionData = {
+            action: action.type,
+            searchCriteria: action.searchCriteria,
+            taskData: action.taskData,
+            response: action.description
+          };
+          await handleTaskManagementAction(actionData, true); // Pass true to skip confirmation
+        }
+        setOperationStatus('');
+        addMessage('assistant', '✅ All actions completed successfully!');
+      } catch (error) {
+        console.error('Error executing complex confirmation:', error);
+        setOperationStatus('');
+        addMessage('assistant', '❌ Sorry, I encountered an error while processing your request. Please try again.');
       }
-      addMessage('assistant', '✅ All actions completed successfully!');
+      
       setPendingAction(null);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isSubmitting) return;
 
     const userInput = input.trim();
     setInput('');
-    setIsLoading(true);
+    setIsSubmitting(true);
 
     // Add user message to conversation
     addMessage('user', userInput);
@@ -605,7 +640,7 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
         } else {
           // Handle other conversational responses (greeting, casual, etc.)
           if (data.conversationType === 'task_management') {
-            await handleTaskManagementAction(data);
+            await handleTaskManagementAction(data, false);
           } else if (data.conversationType === 'schedule_view') {
             // Handle schedule viewing
             if (data.scheduleData) {
@@ -706,7 +741,7 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
       console.error('Error in handleSubmit:', error);
       addMessage('assistant', `❌ Sorry, I encountered an error: ${error.message || 'Unknown error'}. Please try again.`);
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
       console.log('Request completed, loading set to false');
     }
   };
@@ -714,7 +749,7 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
   const handleForceCreate = async () => {
     if (!pendingTask) return;
     
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       await onCreateTask(pendingTask);
       addMessage('assistant', `✅ Task "${pendingTask.title}" has been created despite conflicts.`);
@@ -731,7 +766,7 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
     } catch (error) {
       addMessage('assistant', '❌ Failed to create task. Please try again.');
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -782,14 +817,14 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
               onChange={(e) => setInput(e.target.value)}
                              placeholder="What would you like me to schedule for you?"
               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              disabled={isLoading}
+              disabled={isSubmitting}
             />
             <button
               type="submit"
-              disabled={isLoading || !input.trim()}
+              disabled={isSubmitting || !input.trim()}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Send className="h-4 w-4" />
@@ -861,7 +896,7 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
                 </div>
               </div>
             ))}
-            {isLoading && (
+            {isSubmitting && (
               <div className="flex justify-start">
                 <div className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm">
                   <div className="flex items-center gap-2">
@@ -885,14 +920,14 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
               onChange={(e) => setInput(e.target.value)}
                              placeholder="Tell me what you'd like to schedule..."
               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              disabled={isLoading}
+              disabled={isSubmitting}
             />
             <button
               type="submit"
-              disabled={isLoading || !input.trim()}
+              disabled={isSubmitting || !input.trim()}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Send className="h-4 w-4" />
@@ -906,7 +941,7 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
               <button
                 type="button"
                 onClick={handleForceCreate}
-                disabled={isLoading}
+                disabled={isSubmitting}
                 className="px-3 py-1 bg-orange-600 text-white rounded text-sm hover:bg-orange-700 transition-colors"
               >
                 Create Anyway
@@ -930,7 +965,7 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
               <button
                 type="button"
                 onClick={() => handleConfirmDeletion(pendingAction.taskId)}
-                disabled={isLoading}
+                disabled={isSubmitting}
                 className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors"
               >
                 Yes, Cancel Task
@@ -954,7 +989,7 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
               <button
                 type="button"
                 onClick={() => handleConfirmMultipleDeletion(pendingAction.taskIds)}
-                disabled={isLoading}
+                disabled={isSubmitting}
                 className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors"
               >
                 Yes, Cancel All
@@ -978,7 +1013,7 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
               <button
                 type="button"
                 onClick={handleComplexConfirmation}
-                disabled={isLoading}
+                disabled={isSubmitting}
                 className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
               >
                 Yes, Proceed
@@ -1002,7 +1037,7 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
               <button
                 type="button"
                 onClick={handleOptimizationConfirmation}
-                disabled={isLoading}
+                disabled={isSubmitting}
                 className="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition-colors"
               >
                 Yes, Implement

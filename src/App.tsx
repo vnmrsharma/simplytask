@@ -88,6 +88,11 @@ function App() {
     }
   };
 
+  // Direct delete function for programmatic deletion (e.g., from Donna)
+  const handleDirectDeleteTask = async (taskId: string) => {
+    return deleteTask(taskId);
+  };
+
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
   };
@@ -205,9 +210,7 @@ function App() {
                     onUpdateTask={async (taskId: string, updates: any) => {
                       updateTask(taskId, updates);
                     }}
-                    onDeleteTask={async (taskId: string) => {
-                      handleDeleteTask(taskId);
-                    }}
+                    onDeleteTask={handleDirectDeleteTask}
                   />
                   <TaskFilters
                   activeFilter={activeFilter}

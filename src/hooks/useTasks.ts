@@ -79,6 +79,16 @@ export function useTasks() {
       throw new Error('You must be signed in to create tasks');
     }
 
+    // Create optimistic task for immediate UI update
+    const optimisticTask: Task = {
+      id: `temp-${Date.now()}`, // Temporary ID
+      ...taskData,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Optimistic update - add task to UI immediately
+    setTasks(prev => [optimisticTask, ...prev]);
+
     return handleAsync(async () => {
       // Insert main task
       const { data: taskResult, error: taskError } = await supabase
@@ -112,7 +122,11 @@ export function useTasks() {
         .select()
         .single();
 
-      if (taskError) throw new Error(`Failed to create task: ${taskError.message}`);
+      if (taskError) {
+        // Remove optimistic task on error
+        setTasks(prev => prev.filter(task => task.id !== optimisticTask.id));
+        throw new Error(`Failed to create task: ${taskError.message}`);
+      }
 
       // Insert stakeholders if any
       if (taskData.stakeholders && taskData.stakeholders.length > 0) {
@@ -149,12 +163,21 @@ export function useTasks() {
         ]);
       }
 
+      // Re-fetch all tasks to get the real data and remove the optimistic one
       await fetchTasks();
       return taskResult;
     }, 'Failed to create task');
   };
 
   const updateTask = async (taskId: string, taskData: Partial<Task>) => {
+    // Optimistic update - update task in UI immediately
+    const originalTasks = [...tasks];
+    setTasks(prev => prev.map(task => 
+      task.id === taskId 
+        ? { ...task, ...taskData }
+        : task
+    ));
+
     return handleAsync(async () => {
       const { error: taskError } = await supabase
         .from('tasks')
@@ -181,21 +204,35 @@ export function useTasks() {
         })
         .eq('id', taskId);
 
-      if (taskError) throw new Error(`Failed to update task: ${taskError.message}`);
+      if (taskError) {
+        // Revert optimistic update on error
+        setTasks(originalTasks);
+        throw new Error(`Failed to update task: ${taskError.message}`);
+      }
 
+      // Re-fetch to ensure consistency
       await fetchTasks();
     }, 'Failed to update task');
   };
 
   const deleteTask = async (taskId: string) => {
+    // Optimistic update - remove task from UI immediately
+    const originalTasks = [...tasks];
+    setTasks(prev => prev.filter(task => task.id !== taskId));
+
     return handleAsync(async () => {
       const { error } = await supabase
         .from('tasks')
         .delete()
         .eq('id', taskId);
 
-      if (error) throw new Error(`Failed to delete task: ${error.message}`);
+      if (error) {
+        // Revert optimistic update on error
+        setTasks(originalTasks);
+        throw new Error(`Failed to delete task: ${error.message}`);
+      }
 
+      // Re-fetch to ensure consistency (in case there were concurrent changes)
       await fetchTasks();
     }, 'Failed to delete task');
   };
@@ -211,7 +248,21 @@ export function useTasks() {
       is_overdue: false, // Clear overdue status when completed
     };
 
-    return updateTask(taskId, updates);
+    // Optimistic update - update task in UI immediately
+    const originalTasks = [...tasks];
+    setTasks(prev => prev.map(t => 
+      t.id === taskId 
+        ? { ...t, ...updates }
+        : t
+    ));
+
+    try {
+      await updateTask(taskId, updates);
+    } catch (error) {
+      // Revert optimistic update on error
+      setTasks(originalTasks);
+      throw error;
+    }
   };
 
   return {
