@@ -16,6 +16,7 @@ import { useAuth } from './hooks/useAuth';
 import { useTasks } from './hooks/useTasks';
 import { generateId, filterTasks, sortTasks, processOverdueTasks, generateRecurringTasks, shouldGenerateNextRecurrence } from './utils/taskUtils';
 import { getToday } from './utils/dateUtils';
+import { SmartTaskCreator } from './components/SmartTaskCreator';
 
 function App() {
   const { user, loading: authLoading, signOut, error: authError, clearError: clearAuthError } = useAuth();
@@ -196,9 +197,13 @@ function App() {
           <div className="space-y-6 sm:space-y-8">
             {viewMode !== 'reports' && <TaskStats tasks={tasks} />}
           
-            {viewMode === 'list' && (
-              <>
-                <TaskFilters
+                          {viewMode === 'list' && (
+                <>
+                  <SmartTaskCreator 
+                    tasks={tasks}
+                    onCreateTask={handleCreateTask}
+                  />
+                  <TaskFilters
                   activeFilter={activeFilter}
                   onFilterChange={setActiveFilter}
                   sortBy={sortBy}
