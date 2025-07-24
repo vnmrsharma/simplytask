@@ -1,3 +1,6 @@
+// Vercel Serverless Function - ES Module
+// This file must use only ESM (import/export) syntax and global fetch
+
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 export default async function handler(req: any, res: any) {
@@ -13,8 +16,19 @@ export default async function handler(req: any, res: any) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Debug: Check if API key is present
+  if (!OPENAI_API_KEY) {
+    console.error('OPENAI_API_KEY is missing');
+    return res.status(500).json({ error: 'OpenAI API key is not set in environment variables.' });
+  }
+
   try {
-    const { tasks, date, period = 'daily' } = req.body || req.body === '' ? JSON.parse(req.body) : req.body;
+    // Vercel passes req.body as an object, but fallback to JSON parse for edge cases
+    let body = req.body;
+    if (typeof body === 'string') {
+      body = JSON.parse(body);
+    }
+    const { tasks, date, period = 'daily' } = body || {};
     if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
       return res.status(200).json({ summary: `There are no tasks to summarize for this ${period}. Let's set some goals and make progress!` });
     }
@@ -54,6 +68,7 @@ Summary:
       prompt = `Summarize the following tasks in a motivating and positive way.`;
     }
 
+    // Use global fetch (Node 18+ on Vercel)
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -70,6 +85,7 @@ Summary:
 
     if (!openaiRes.ok) {
       const error = await openaiRes.text();
+      console.error('OpenAI error:', error);
       return res.status(500).json({ error: 'OpenAI error: ' + error });
     }
 
@@ -78,6 +94,7 @@ Summary:
 
     res.status(200).json({ summary });
   } catch (err: any) {
+    console.error('Server error:', err);
     res.status(500).json({ error: err.message || 'Server error' });
   }
 } 
