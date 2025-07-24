@@ -35,6 +35,17 @@ interface ParsedTaskResponse {
   response?: string; // Added for conversational responses
   suggestion?: string; // Added for conversational responses
   followUp?: boolean; // Added for conversational responses
+  title?: string; // Added for scheduling responses
+  description?: string; // Added for scheduling responses
+  startDate?: string; // Added for scheduling responses
+  endDate?: string; // Added for scheduling responses
+  startTime?: string; // Added for scheduling responses
+  endTime?: string; // Added for scheduling responses
+  priority?: string; // Added for scheduling responses
+  category?: string; // Added for scheduling responses
+  estimatedHours?: number; // Added for scheduling responses
+  participants?: string[]; // Added for scheduling responses
+  assistantMessage?: string; // Added for scheduling responses
 }
 
 export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({ 
@@ -117,19 +128,63 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
       // Handle different response types
       if (data.conversationType) {
         // Handle conversational responses
-        addMessage('assistant', data.response || data.message || 'I understand!');
-        
-        if (data.suggestion) {
-          setTimeout(() => {
-            addMessage('assistant', data.suggestion);
-          }, 1000);
+        if (data.conversationType === 'scheduling') {
+          // This is a scheduling response - treat it like a parsed task
+          if (data.title) {
+            // First show the assistant's helpful message if available
+            if (data.assistantMessage) {
+              addMessage('assistant', data.assistantMessage);
+            } else {
+              addMessage('assistant', 'Task created successfully!');
+            }
+            
+            // Create the task using the response data directly
+            const taskData = {
+              title: data.title,
+              description: data.description || '',
+              startDate: data.startDate!,
+              endDate: data.endDate!,
+              startTime: data.startTime!,
+              endTime: data.endTime!,
+              priority: data.priority || 'medium',
+              category: data.category || 'personal',
+              estimatedHours: data.estimatedHours || 1,
+              participants: data.participants || [],
+            };
+            
+            await onCreateTask(taskData);
+            
+            // Add a confirmation message
+            addMessage('assistant', `✅ All set! "${data.title}" is now in your calendar for ${formatDate(data.startDate!)} at ${formatTime(data.startTime!)}.`);
+            
+            // Reset conversation after a delay
+            setTimeout(() => {
+              setConversation([]);
+              setConversationContext('');
+              setPendingTask(null);
+              if (!isExpanded) {
+                setShowConversation(false);
+              }
+            }, 4000);
+          } else {
+            addMessage('assistant', 'I had trouble understanding the task details. Could you try rephrasing?');
+          }
+        } else {
+          // Handle other conversational responses (greeting, casual, etc.)
+          addMessage('assistant', data.response || data.message || 'I understand!');
+          
+          if (data.suggestion) {
+            setTimeout(() => {
+              addMessage('assistant', data.suggestion);
+            }, 1000);
+          }
+          
+          if (data.followUp) {
+            setConversationContext(prev => `${prev}\nUser: ${userInput}\nAssistant: ${data.response || ''}`);
+          }
         }
         
-        if (data.followUp) {
-          setConversationContext(prev => `${prev}\nUser: ${userInput}\nAssistant: ${data.response || ''}`);
-        }
-        
-        return; // Don't process as scheduling task
+        return; // Don't process as legacy scheduling task
       }
       
       // Handle scheduling responses

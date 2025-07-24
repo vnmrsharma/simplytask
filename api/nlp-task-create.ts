@@ -19,6 +19,11 @@ interface ParsedTask {
   estimatedHours?: number;
   participants?: string[];
   confidence: number;
+  // Conversational properties
+  conversationType?: string;
+  response?: string;
+  suggestion?: string;
+  followUp?: boolean;
 }
 
 interface NLPResponse {
@@ -211,25 +216,74 @@ RESPONSE RULES:
 
     console.log('OpenAI response received successfully');
 
-    let parsedTask: ParsedTask & { needsFollowUp?: boolean; followUpQuestion?: string };
+    let parsedTask: ParsedTask & { needsFollowUp?: boolean; followUpQuestion?: string; assistantMessage?: string };
     try {
       parsedTask = JSON.parse(responseText);
     } catch (parseError) {
       console.error('JSON parse error:', parseError);
+      console.error('Raw response:', responseText);
       throw new Error('Invalid response format from AI');
     }
 
-    // Check if follow-up is needed
+    // Handle conversational responses (non-scheduling)
+    if (parsedTask.conversationType && parsedTask.conversationType !== 'scheduling') {
+      return res.status(200).json({
+        conversationType: parsedTask.conversationType,
+        response: parsedTask.response || parsedTask.assistantMessage,
+        suggestion: parsedTask.suggestion,
+        followUp: parsedTask.followUp || false
+      });
+    }
+
+    // Handle scheduling responses
+    if (parsedTask.conversationType === 'scheduling' || parsedTask.title) {
+      // Validate required fields for task creation
+      if (!parsedTask.title || !parsedTask.startDate || !parsedTask.startTime || !parsedTask.endTime) {
+        return res.status(200).json({
+          status: 'need_more_info',
+          question: 'I need a bit more information to schedule this task. Could you please specify the title, date, start time, and end time?',
+          task: parsedTask
+        });
+      }
+
+      // Check for conflicts
+      const conflicts = checkConflicts(parsedTask, existingTasks || []);
+      
+      if (conflicts.length > 0) {
+        return res.status(200).json({
+          status: 'conflict',
+          message: `You have ${conflicts.length} conflicting task(s) during this time. Would you like to reschedule?`,
+          conflicts: conflicts,
+          task: parsedTask
+        });
+      }
+
+      // Return scheduling task data
+      return res.status(200).json({
+        conversationType: 'scheduling',
+        title: parsedTask.title,
+        description: parsedTask.description || '',
+        startDate: parsedTask.startDate,
+        endDate: parsedTask.endDate || parsedTask.startDate,
+        startTime: parsedTask.startTime,
+        endTime: parsedTask.endTime,
+        priority: parsedTask.priority || 'medium',
+        category: parsedTask.category || 'personal',
+        estimatedHours: parsedTask.estimatedHours || 1.0,
+        participants: parsedTask.participants || [],
+        assistantMessage: parsedTask.assistantMessage || 'Perfect! I\'ve got all the details to create your task.'
+      });
+    }
+
+    // Legacy handling for old format responses
     if (parsedTask.needsFollowUp || parsedTask.confidence < 0.6) {
       return res.status(200).json({
         status: 'need_more_info',
-        question: parsedTask.followUpQuestion || 
-                 'Could you provide more details about when you\'d like to schedule this task?',
+        question: parsedTask.followUpQuestion || 'Could you provide more details about this task?',
         task: parsedTask
       });
     }
 
-    // Check for conflicts with existing tasks
     const conflicts = checkConflicts(parsedTask, existingTasks || []);
     
     if (conflicts.length > 0) {
@@ -241,7 +295,6 @@ RESPONSE RULES:
       });
     }
 
-    // All good - return parsed task for creation
     return res.status(200).json({
       status: 'parsed',
       message: 'Task details extracted successfully!',
@@ -249,16 +302,16 @@ RESPONSE RULES:
         title: parsedTask.title,
         description: parsedTask.description || '',
         startDate: parsedTask.startDate,
-        endDate: parsedTask.endDate,
+        endDate: parsedTask.endDate || parsedTask.startDate,
         startTime: parsedTask.startTime,
         endTime: parsedTask.endTime,
-        priority: parsedTask.priority,
-        category: parsedTask.category,
-        estimatedHours: parsedTask.estimatedHours || 1,
-        completed: false,
+        priority: parsedTask.priority || 'medium',
+        category: parsedTask.category || 'personal',
+        estimatedHours: parsedTask.estimatedHours || 1.0,
+        participants: parsedTask.participants || [],
+        recurrence: null,
         stakeholders: parsedTask.participants || [],
-        links: [],
-        recurrence: { type: 'none' as const }
+        links: []
       }
     });
 
