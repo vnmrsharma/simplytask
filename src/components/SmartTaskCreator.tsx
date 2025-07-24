@@ -80,7 +80,6 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
   const [input, setInput] = useState('');
   const [pendingTask, setPendingTask] = useState<any>(null);
   const [pendingAction, setPendingAction] = useState<any>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
   const [showConversation, setShowConversation] = useState(isExpanded);
   const [conversation, setConversation] = useState<Array<{ role: 'user' | 'assistant'; content: string; timestamp: Date }>>([]);
   const [conversationContext, setConversationContext] = useState('');
