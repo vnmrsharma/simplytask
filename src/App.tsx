@@ -202,6 +202,12 @@ function App() {
                   <SmartTaskCreator 
                     tasks={tasks}
                     onCreateTask={handleCreateTask}
+                    onUpdateTask={async (taskId: string, updates: any) => {
+                      updateTask(taskId, updates);
+                    }}
+                    onDeleteTask={async (taskId: string) => {
+                      handleDeleteTask(taskId);
+                    }}
                   />
                   <TaskFilters
                   activeFilter={activeFilter}

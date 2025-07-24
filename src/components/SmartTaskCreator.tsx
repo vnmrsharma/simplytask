@@ -13,8 +13,10 @@ import {
 import { Task } from '../types/Task';
 
 interface SmartTaskCreatorProps {
-  tasks: Task[];
-  onCreateTask: (task: Omit<Task, 'id' | 'createdAt' | 'userId'>) => Promise<void>;
+  tasks: any[];
+  onCreateTask: (task: any) => Promise<void>;
+  onUpdateTask?: (taskId: string, updates: any) => Promise<void>;
+  onDeleteTask?: (taskId: string) => Promise<void>;
   onClose?: () => void;
   isExpanded?: boolean;
 }
@@ -26,7 +28,7 @@ interface ConversationMessage {
 }
 
 interface ParsedTaskResponse {
-  status: 'need_more_info' | 'conflict' | 'parsed' | 'error';
+  status?: 'need_more_info' | 'conflict' | 'parsed' | 'error';
   message?: string;
   question?: string;
   task?: any;
@@ -46,12 +48,24 @@ interface ParsedTaskResponse {
   estimatedHours?: number; // Added for scheduling responses
   participants?: string[]; // Added for scheduling responses
   assistantMessage?: string; // Added for scheduling responses
+  // New task management properties
+  scheduleData?: any;
+  taskActions?: any[];
+  action?: string;
+  taskId?: string;
+  taskData?: any;
+  suggestions?: string[];
+  scheduleAnalysis?: string;
+  conflictDetected?: boolean;
+  conflictOptions?: any[];
 }
 
 export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({ 
   tasks, 
   onCreateTask, 
-  onClose,
+  onUpdateTask = async () => {}, 
+  onDeleteTask = async () => {}, 
+  onClose, 
   isExpanded = false 
 }) => {
   const [input, setInput] = useState('');
@@ -60,42 +74,108 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
   const [conversationContext, setConversationContext] = useState('');
   const [pendingTask, setPendingTask] = useState<any>(null);
   const [showConversation, setShowConversation] = useState(isExpanded);
+  const [pendingAction, setPendingAction] = useState<any>(null);
 
   // Helper functions
   const formatDate = (dateStr: string): string => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'long', 
+    return new Date(dateStr).toLocaleDateString('en-US', { 
+      weekday: 'short', 
       month: 'short', 
       day: 'numeric' 
     });
   };
 
   const formatTime = (timeStr: string): string => {
-    const [hours, minutes] = timeStr.split(':');
-    const date = new Date();
-    date.setHours(parseInt(hours), parseInt(minutes));
-    return date.toLocaleTimeString('en-US', {
+    return new Date(`2000-01-01T${timeStr}`).toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true
     });
   };
 
+  const formatTaskList = (tasks: any[]): string => {
+    return tasks.map(task => 
+      `• ${task.title} (${formatTime(task.startTime)} - ${formatTime(task.endTime)})`
+    ).join('\n');
+  };
+
   // Add welcome message when conversation starts
   const startConversation = () => {
     setShowConversation(true);
     if (conversation.length === 0) {
-      addMessage('assistant', "Hi! I'm Donna, your personal scheduling assistant. 🗓️ I'm here to help you organize your time and make scheduling effortless. Just tell me what you'd like to schedule, and I'll take care of the rest!");
+      addMessage('assistant', "Hi! I'm Donna, your personal scheduling assistant with full access to your calendar. 🗓️ I can help you schedule, edit, delete, move tasks, and analyze your schedule. Just tell me what you need!");
     }
   };
 
   const addMessage = (type: 'user' | 'assistant', content: string) => {
-    setConversation(prev => [...prev, {
-      type,
-      content,
-      timestamp: new Date()
-    }]);
+    setConversation(prev => [...prev, { type, content, timestamp: new Date() }]);
+  };
+
+  const handleTaskManagementAction = async (data: ParsedTaskResponse) => {
+    switch (data.action) {
+      case 'edit':
+      case 'reschedule':
+        if (data.taskId && data.taskData) {
+          await onUpdateTask(data.taskId, data.taskData);
+          addMessage('assistant', `✅ ${data.response}`);
+          if (data.scheduleAnalysis) {
+            addMessage('assistant', `💡 ${data.scheduleAnalysis}`);
+          }
+        }
+        break;
+        
+      case 'delete':
+        if (data.taskId) {
+          await onDeleteTask(data.taskId);
+          addMessage('assistant', `✅ ${data.response}`);
+        }
+        break;
+        
+      case 'view':
+        if (data.scheduleData) {
+          let scheduleMessage = data.response + '\n\n';
+          
+          if (data.scheduleData.tasks && data.scheduleData.tasks.length > 0) {
+            scheduleMessage += '📅 **Your Tasks:**\n' + formatTaskList(data.scheduleData.tasks);
+          }
+          
+          if (data.scheduleData.freeSlots && data.scheduleData.freeSlots.length > 0) {
+            scheduleMessage += '\n\n🕐 **Free Time:**\n' + data.scheduleData.freeSlots.map(slot => `• ${slot}`).join('\n');
+          }
+          
+          if (data.scheduleData.insights && data.scheduleData.insights.length > 0) {
+            scheduleMessage += '\n\n💡 **Insights:**\n' + data.scheduleData.insights.map(insight => `• ${insight}`).join('\n');
+          }
+          
+          addMessage('assistant', scheduleMessage);
+        }
+        break;
+        
+      case 'optimize':
+        addMessage('assistant', data.response || 'I\'ve analyzed your schedule for optimization opportunities.');
+        if (data.suggestions && data.suggestions.length > 0) {
+          addMessage('assistant', '💡 **Optimization Suggestions:**\n' + data.suggestions.map(s => `• ${s}`).join('\n'));
+        }
+        break;
+    }
+  };
+
+  const handleAdvancedConflicts = (data: ParsedTaskResponse) => {
+    addMessage('assistant', data.response || 'I found some scheduling conflicts.');
+    
+    if (data.conflictOptions && data.conflictOptions.length > 0) {
+      let optionsMessage = '\n🔀 **Here are your options:**\n\n';
+      data.conflictOptions.forEach((option, index) => {
+        optionsMessage += `**Option ${index + 1}:** ${option.description}\n`;
+        if (option.suggestedTime) {
+          optionsMessage += `⏰ Suggested time: ${formatTime(option.suggestedTime)}\n`;
+        }
+        optionsMessage += `💭 Why: ${option.reasoning}\n\n`;
+      });
+      
+      addMessage('assistant', optionsMessage);
+      setPendingAction({ type: 'conflict_resolution', data: data });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -171,7 +251,33 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
           }
         } else {
           // Handle other conversational responses (greeting, casual, etc.)
-          addMessage('assistant', data.response || data.message || 'I understand!');
+          if (data.conversationType === 'task_management') {
+            await handleTaskManagementAction(data);
+          } else if (data.conversationType === 'schedule_view') {
+            // Handle schedule viewing
+            if (data.scheduleData) {
+              let scheduleMessage = data.response + '\n\n';
+              
+              if (data.scheduleData.tasks && data.scheduleData.tasks.length > 0) {
+                scheduleMessage += '📅 **Your Tasks:**\n' + formatTaskList(data.scheduleData.tasks);
+              }
+              
+              if (data.scheduleData.freeSlots && data.scheduleData.freeSlots.length > 0) {
+                scheduleMessage += '\n\n🕐 **Free Time:**\n' + data.scheduleData.freeSlots.map((slot: string) => `• ${slot}`).join('\n');
+              }
+              
+              if (data.scheduleData.insights && data.scheduleData.insights.length > 0) {
+                scheduleMessage += '\n\n💡 **Insights:**\n' + data.scheduleData.insights.map((insight: string) => `• ${insight}`).join('\n');
+              }
+              
+              addMessage('assistant', scheduleMessage);
+            } else {
+              addMessage('assistant', data.response || 'Let me check your schedule...');
+            }
+          } else {
+            // Handle general conversational responses
+            addMessage('assistant', data.response || data.message || 'I understand!');
+          }
           
           if (data.suggestion) {
             setTimeout(() => {
@@ -182,6 +288,11 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
           if (data.followUp) {
             setConversationContext(prev => `${prev}\nUser: ${userInput}\nAssistant: ${data.response || ''}`);
           }
+        }
+        
+        // Handle advanced conflict resolution
+        if (data.conflictDetected && data.conflictOptions) {
+          handleAdvancedConflicts(data);
         }
         
         return; // Don't process as legacy scheduling task
@@ -272,12 +383,16 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
 
   const quickSuggestions = [
     "Hey Donna! How are you?",
-    "What can you help me with?",
+    "What do I have tomorrow?", 
     "Schedule a meeting with the team at 2 PM today",
-    "I need to work on the presentation tomorrow",
+    "Move my 3pm meeting to 4pm",
+    "What can you help me with?",
+    "Cancel my 2pm call",
+    "When am I free this week?",
+    "Find me 2 hours for deep work",
     "I'm feeling overwhelmed with my schedule",
+    "Reorganize my afternoon",
     "Block time for deep work this afternoon",
-    "Set up a call with the client this week",
     "How should I prioritize my tasks?"
   ];
 
