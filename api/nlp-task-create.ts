@@ -8,23 +8,20 @@ const openai = new OpenAI({
 });
 
 interface ParsedTask {
-  title: string;
+  conversationType?: string;
+  title?: string;
   description?: string;
-  startDate: string;
-  endDate: string;
-  startTime: string;
-  endTime: string;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  category: 'work' | 'personal' | 'meeting' | 'strategic' | 'operational' | 'review';
+  startDate?: string;
+  endDate?: string;
+  startTime?: string;
+  endTime?: string;
+  priority?: 'low' | 'medium' | 'high';
+  category?: 'work' | 'personal' | 'meeting' | 'exercise' | 'learning' | 'health' | 'travel' | 'shopping' | 'entertainment' | 'family' | 'other';
   estimatedHours?: number;
   participants?: string[];
-  confidence: number;
-  // Conversational properties
-  conversationType?: string;
   response?: string;
   suggestion?: string;
   followUp?: boolean;
-  // Task management properties
   scheduleData?: any;
   taskActions?: any[];
   action?: string;
@@ -34,6 +31,14 @@ interface ParsedTask {
   scheduleAnalysis?: string;
   conflictDetected?: boolean;
   conflictOptions?: any[];
+  // Add missing properties for complex operations
+  actions?: any[];
+  optimizations?: any[];
+  clarificationNeeded?: any[];
+  partialUnderstanding?: any;
+  confirmationNeeded?: boolean;
+  assistantMessage?: string;
+  searchCriteria?: any;
 }
 
 interface NLPResponse {
@@ -219,6 +224,53 @@ For clarification of ambiguous requests:
 
 EXAMPLES OF ADVANCED HANDLING:
 
+User: "Cancel all my meetings today" / "Hey Can you cancel all my meetings today"
+Response: {
+  "conversationType": "complex_operation",
+  "actions": [
+    {
+      "type": "delete",
+      "description": "Cancel all meetings scheduled for today",
+      "searchCriteria": { "category": "meeting", "date": "today" },
+      "priority": 1
+    }
+  ],
+  "response": "I will cancel all your meetings scheduled for today.",
+  "confirmationNeeded": true,
+  "assistantMessage": "I found your meetings scheduled for today. Would you like me to cancel all of them? This action cannot be undone."
+}
+
+User: "Tell me the free time I have today" / "What free time do I have today"
+Response: {
+  "conversationType": "schedule_view",
+  "response": "I'll analyze your schedule for today to identify your free time slots.",
+  "scheduleData": {
+    "period": "today",
+    "tasks": "current_tasks_for_today",
+    "freeSlots": "CALCULATE_ACTUAL_FREE_SLOTS",
+    "insights": "CALCULATE_ACTUAL_INSIGHTS"
+  },
+  "assistantMessage": "Based on your schedule, I'll calculate your exact free time slots and provide detailed insights about your availability."
+}
+
+IMPORTANT FOR SCHEDULE VIEWING: When users ask about free time or schedule viewing, always use "CALCULATE_ACTUAL_FREE_SLOTS" and "CALCULATE_ACTUAL_INSIGHTS" as placeholders - the backend will calculate the real data based on their current tasks.
+
+User: "Cancel my meeting with John today"
+Response: {
+  "conversationType": "complex_operation",
+  "actions": [
+    {
+      "type": "delete",
+      "description": "Cancel meeting with John today",
+      "searchCriteria": { "title_contains": "John", "date": "today", "category": "meeting" },
+      "priority": 1
+    }
+  ],
+  "response": "I will cancel your meeting with John scheduled for today.",
+  "confirmationNeeded": true,
+  "assistantMessage": "I found your meeting with John today. Would you like me to cancel it?"
+}
+
 User: "I need to reschedule everything from Tuesday because I'm sick, but keep urgent meetings"
 Response: {
   "conversationType": "complex_operation",
@@ -350,6 +402,35 @@ IMPORTANT: Always respond with valid JSON only. Use your intelligence to parse e
     // Handle conversational responses (non-scheduling)
     if (parsedTask.conversationType && parsedTask.conversationType !== 'scheduling') {
       console.log('Returning conversational response');
+      
+      // Special handling for schedule_view to calculate actual free time
+      if (parsedTask.conversationType === 'schedule_view' && parsedTask.scheduleData) {
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Calculate actual free time slots
+        if (parsedTask.scheduleData.freeSlots === 'CALCULATE_ACTUAL_FREE_SLOTS' || 
+            parsedTask.scheduleData.insights === 'CALCULATE_ACTUAL_INSIGHTS') {
+          const { freeSlots, insights } = calculateFreeTimeSlots(existingTasks || [], today);
+          
+          // Update the schedule data with actual calculations
+          parsedTask.scheduleData.freeSlots = freeSlots;
+          parsedTask.scheduleData.insights = insights;
+          
+          // Update the assistant message with actual data
+          if (freeSlots.length > 0) {
+            const freeTimeDisplay = freeSlots.map(slot => {
+              const [start, end] = slot.split('-');
+              const duration = ((timeToMinutes(end) - timeToMinutes(start)) / 60).toFixed(1);
+              return `${start}-${end} (${duration}h)`;
+            }).join(', ');
+            
+            parsedTask.assistantMessage = `Based on your schedule today, you have ${freeSlots.length} free time slot${freeSlots.length > 1 ? 's' : ''}: ${freeTimeDisplay}. ${insights.join(' ')}`;
+          } else {
+            parsedTask.assistantMessage = `Your schedule is completely booked today. ${insights.join(' ')}`;
+          }
+        }
+      }
+      
       return res.status(200).json({
         conversationType: parsedTask.conversationType,
         response: parsedTask.response || parsedTask.assistantMessage,
@@ -363,7 +444,15 @@ IMPORTANT: Always respond with valid JSON only. Use your intelligence to parse e
         suggestions: parsedTask.suggestions || null,
         scheduleAnalysis: parsedTask.scheduleAnalysis || null,
         conflictDetected: parsedTask.conflictDetected || false,
-        conflictOptions: parsedTask.conflictOptions || null
+        conflictOptions: parsedTask.conflictOptions || null,
+        // Add missing fields for complex operations and optimizations
+        actions: parsedTask.actions || null,
+        optimizations: parsedTask.optimizations || null,
+        clarificationNeeded: parsedTask.clarificationNeeded || null,
+        partialUnderstanding: parsedTask.partialUnderstanding || null,
+        confirmationNeeded: parsedTask.confirmationNeeded || false,
+        assistantMessage: parsedTask.assistantMessage || null,
+        searchCriteria: parsedTask.searchCriteria || null
       });
     }
 
@@ -437,6 +526,9 @@ function checkConflicts(newTask: ParsedTask, existingTasks: any[]): any[] {
     // Check if tasks are on the same date
     if (task.startDate !== newTask.startDate && task.endDate !== newTask.endDate) continue;
     
+    // Skip if time information is missing
+    if (!newTask.startTime || !newTask.endTime || !task.startTime || !task.endTime) continue;
+    
     // Convert times to minutes for easier comparison
     const newStart = timeToMinutes(newTask.startTime);
     const newEnd = timeToMinutes(newTask.endTime);
@@ -461,4 +553,84 @@ function checkConflicts(newTask: ParsedTask, existingTasks: any[]): any[] {
 function timeToMinutes(timeStr: string): number {
   const [hours, minutes] = timeStr.split(':').map(Number);
   return hours * 60 + minutes;
+} 
+
+// Helper function to calculate free time slots
+function calculateFreeTimeSlots(tasks: any[], date: string): { freeSlots: string[], insights: string[] } {
+  const workDayStart = 9; // 9 AM
+  const workDayEnd = 18; // 6 PM
+  
+  // Filter tasks for the specified date and sort by start time
+  const dayTasks = tasks
+    .filter(task => task.startDate === date && !task.completed)
+    .map(task => ({
+      start: timeToMinutes(task.startTime),
+      end: timeToMinutes(task.endTime),
+      title: task.title
+    }))
+    .sort((a, b) => a.start - b.start);
+  
+  const freeSlots: string[] = [];
+  const insights: string[] = [];
+  
+  let currentTime = workDayStart * 60; // Start of work day in minutes
+  let totalFreeTime = 0;
+  
+  for (const task of dayTasks) {
+    // If there's a gap before this task
+    if (currentTime < task.start) {
+      const gapDuration = task.start - currentTime;
+      if (gapDuration >= 30) { // Only include slots of 30+ minutes
+        const startHour = Math.floor(currentTime / 60);
+        const startMin = currentTime % 60;
+        const endHour = Math.floor(task.start / 60);
+        const endMin = task.start % 60;
+        
+        freeSlots.push(`${startHour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}-${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}`);
+        totalFreeTime += gapDuration;
+      }
+    }
+    currentTime = Math.max(currentTime, task.end);
+  }
+  
+  // Check for free time after the last task until end of work day
+  const workDayEndMinutes = workDayEnd * 60;
+  if (currentTime < workDayEndMinutes) {
+    const remainingTime = workDayEndMinutes - currentTime;
+    if (remainingTime >= 30) {
+      const startHour = Math.floor(currentTime / 60);
+      const startMin = currentTime % 60;
+      
+      freeSlots.push(`${startHour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}-${workDayEnd}:00`);
+      totalFreeTime += remainingTime;
+    }
+  }
+  
+  // Generate insights
+  if (totalFreeTime > 0) {
+    const totalHours = (totalFreeTime / 60).toFixed(1);
+    insights.push(`You have ${totalHours} hours of free time today`);
+    
+    if (freeSlots.length > 0) {
+      const longestSlot = freeSlots.reduce((longest, current) => {
+        const [start, end] = current.split('-');
+        const duration = timeToMinutes(end) - timeToMinutes(start);
+        const [longestStart, longestEnd] = longest.split('-');
+        const longestDuration = timeToMinutes(longestEnd) - timeToMinutes(longestStart);
+        return duration > longestDuration ? current : longest;
+      });
+      
+      const [start, end] = longestSlot.split('-');
+      const longestDuration = ((timeToMinutes(end) - timeToMinutes(start)) / 60).toFixed(1);
+      insights.push(`Longest available block is ${longestDuration} hours (${longestSlot})`);
+    }
+  } else {
+    insights.push("Your schedule is fully booked today");
+  }
+  
+  if (freeSlots.length === 0 && totalFreeTime === 0) {
+    insights.push("Consider rescheduling some tasks to create breathing room");
+  }
+  
+  return { freeSlots, insights };
 } 
