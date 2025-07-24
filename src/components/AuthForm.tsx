@@ -172,24 +172,24 @@ const AuthForm: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4 sm:p-6">
       <div className="max-w-md w-full">
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6 sm:mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-3 bg-blue-600 rounded-xl shadow-lg">
-              <Target className="h-8 w-8 text-white" />
+            <div className="p-2 sm:p-3 bg-blue-600 rounded-xl shadow-lg">
+              <Target className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">SimplyTask</h1>
-              <p className="text-sm text-gray-600">Executive Suite</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">SimplyTask</h1>
+              <p className="text-xs sm:text-sm text-gray-600">Executive Suite</p>
             </div>
           </div>
-          <p className="text-gray-600 text-lg">Streamline your executive workflow</p>
+          <p className="text-gray-600 text-base sm:text-lg">Streamline your executive workflow</p>
         </div>
 
         {/* Main Form Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
+        <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 border border-gray-100">
           {/* Mode Header */}
           <div className="mb-6">
             {mode === 'forgot-password' && (
@@ -202,12 +202,12 @@ const AuthForm: React.FC = () => {
               </button>
             )}
             
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
               {mode === 'signin' && 'Welcome Back'}
               {mode === 'signup' && 'Create Account'}
               {mode === 'forgot-password' && 'Reset Password'}
             </h2>
-            <p className="text-gray-600">
+            <p className="text-sm sm:text-base text-gray-600">
               {mode === 'signin' && 'Sign in to access your productivity dashboard'}
               {mode === 'signup' && 'Start managing your executive tasks efficiently'}
               {mode === 'forgot-password' && 'Enter your email to receive reset instructions'}
@@ -286,7 +286,7 @@ const AuthForm: React.FC = () => {
                   id="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${
+                  className={`w-full pl-10 pr-4 py-3 sm:py-4 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 text-base touch-manipulation ${
                     validation.email.isValid && email ? 'border-green-300 focus:ring-green-500' :
                     !validation.email.isValid && email ? 'border-red-300 focus:ring-red-500' :
                     'border-gray-300 focus:ring-blue-500'

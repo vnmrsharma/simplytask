@@ -1,3 +1,180 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Mobile-first optimization layer */
+@layer base {
+  /* Improve mobile tap targets */
+  button,
+  [role="button"],
+  input[type="submit"],
+  input[type="button"] {
+    -webkit-tap-highlight-color: transparent;
+    min-height: 44px; /* iOS accessibility guidelines */
+    min-width: 44px;
+  }
+
+  /* Optimize touch interactions */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+  }
+
+  /* Improve mobile text input */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="date"],
+  input[type="time"],
+  textarea,
+  select {
+    font-size: 16px; /* Prevent zoom on iOS */
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* Optimize mobile scrolling */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Fix iOS Safari viewport issues */
+  html {
+    height: 100%;
+    height: -webkit-fill-available;
+  }
+
+  body {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+
+  /* Optimize mobile focus states */
+  @media (hover: none) and (pointer: coarse) {
+    button:hover,
+    [role="button"]:hover {
+      /* Remove hover states on touch devices */
+      background-color: initial;
+      color: initial;
+    }
+  }
+
+  /* Enhanced focus visibility for accessibility */
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+
+  /* Mobile-specific animations */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Mobile-optimized button styles */
+  .btn-mobile {
+    @apply touch-manipulation min-h-[44px] px-4 py-3 text-base font-medium rounded-lg transition-colors;
+  }
+
+  .btn-mobile-sm {
+    @apply touch-manipulation min-h-[36px] px-3 py-2 text-sm font-medium rounded-md transition-colors;
+  }
+
+  /* Mobile-optimized input styles */
+  .input-mobile {
+    @apply touch-manipulation text-base py-3 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+  }
+
+  /* Mobile-safe spacing utilities */
+  .safe-area-inset-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-inset-left {
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .safe-area-inset-right {
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+@layer utilities {
+  /* Mobile performance utilities */
+  .gpu-accelerated {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  .prevent-zoom {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Mobile interaction utilities */
+  .no-tap-highlight {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .select-none-mobile {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+  }
+
+  /* Mobile layout utilities */
+  .container-mobile {
+    @apply max-w-screen-sm mx-auto px-4;
+  }
+
+  /* Mobile typography scale */
+  .text-mobile-xs { font-size: 0.75rem; line-height: 1rem; }
+  .text-mobile-sm { font-size: 0.875rem; line-height: 1.25rem; }
+  .text-mobile-base { font-size: 1rem; line-height: 1.5rem; }
+  .text-mobile-lg { font-size: 1.125rem; line-height: 1.75rem; }
+  .text-mobile-xl { font-size: 1.25rem; line-height: 1.75rem; }
+  .text-mobile-2xl { font-size: 1.5rem; line-height: 2rem; }
+}
+
+/* Performance optimizations for mobile */
+@media screen and (max-width: 640px) {
+  /* Reduce complexity for low-end devices */
+  .shadow-2xl {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+  
+  /* Optimize background gradients for mobile */
+  .bg-gradient-to-br {
+    background: linear-gradient(135deg, var(--tw-gradient-from), var(--tw-gradient-to));
+  }
+}
+
+/* Dark mode optimizations */
+@media (prefers-color-scheme: dark) {
+  /* Add dark mode support preparation */
+  :root {
+    --mobile-surface: #1f2937;
+    --mobile-text: #f9fafb;
+    --mobile-border: #374151;
+  }
+}

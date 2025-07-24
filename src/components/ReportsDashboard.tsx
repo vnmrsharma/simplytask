@@ -1245,21 +1245,21 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ tasks }) => 
     };
 
     return (
-      <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Productivity Reports</h2>
-              <p className="text-gray-600">Track your progress and identify productivity patterns</p>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Productivity Reports</h2>
+              <p className="text-sm sm:text-base text-gray-600">Track your progress and identify productivity patterns</p>
             </div>
             
-            <div className="flex items-center gap-4">            
-              <div className="flex bg-gray-100 rounded-lg p-1">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">            
+              <div className="flex bg-gray-100 rounded-lg p-1 w-full sm:w-auto">
                 {(['daily', 'weekly', 'monthly'] as ReportPeriod[]).map((period) => (
                   <button
                     key={period}
                     onClick={() => setSelectedPeriod(period)}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors capitalize ${
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors capitalize touch-manipulation ${
                       selectedPeriod === period
                         ? 'bg-white text-gray-900 shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
@@ -1270,19 +1270,19 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ tasks }) => 
                 ))}
               </div>
               
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 self-center">
                 <button
                   onClick={() => navigateDate('prev')}
-                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors touch-manipulation"
                 >
                   <ArrowUp className="w-4 h-4 transform rotate-[-90deg]" />
                 </button>
-                <span className="text-sm font-medium text-gray-900 min-w-[200px] text-center">
+                <span className="text-xs sm:text-sm font-medium text-gray-900 min-w-[180px] sm:min-w-[200px] text-center">
                   {getDateRangeText()}
                 </span>
                 <button
                   onClick={() => navigateDate('next')}
-                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors touch-manipulation"
                 >
                   <ArrowUp className="w-4 h-4 transform rotate-90" />
                 </button>

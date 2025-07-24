@@ -941,15 +941,15 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
 
       {/* Conversation */}
       {conversation.length > 0 && (
-        <div className="max-h-60 overflow-y-auto p-4 bg-gray-50 border-b">
-          <div className="space-y-3">
+        <div className="max-h-48 sm:max-h-60 overflow-y-auto p-3 sm:p-4 bg-gray-50 border-b">
+          <div className="space-y-2 sm:space-y-3">
             {conversation.map((message, index) => (
               <div
                 key={index}
                 className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-sm lg:max-w-md rounded-lg px-3 py-2 text-sm ${
+                  className={`max-w-xs sm:max-w-sm lg:max-w-md rounded-lg px-3 py-2 text-xs sm:text-sm ${
                     message.type === 'user'
                       ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-md'
                       : 'bg-gradient-to-br from-blue-600 to-purple-600 text-white shadow-md'
@@ -988,15 +988,15 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
       )}
 
       {/* Input Area */}
-      <div className="p-4">
+      <div className="p-3 sm:p-4">
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="flex gap-2">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-                             placeholder="Tell me what you'd like to schedule..."
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Tell me what you'd like to schedule..."
+              className="flex-1 px-3 sm:px-4 py-3 sm:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base sm:text-sm touch-manipulation"
               disabled={isSubmitting}
             />
             <button
@@ -1135,14 +1135,14 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
 
         {/* Quick Suggestions */}
         {conversation.length === 0 && (
-          <div className="mt-4">
-                         <p className="text-xs text-gray-500 mb-2">Here are some things I can help you with:</p>
-            <div className="grid grid-cols-1 gap-2">
+          <div className="mt-3 sm:mt-4">
+            <p className="text-xs text-gray-500 mb-2">Here are some things I can help you with:</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {quickSuggestions.map((suggestion, index) => (
                 <button
                   key={index}
                   onClick={() => setInput(suggestion)}
-                  className="text-left text-xs text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded px-2 py-1 transition-colors"
+                  className="text-left text-xs sm:text-sm text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded px-2 sm:px-3 py-2 transition-colors touch-manipulation"
                 >
                   {suggestion}
                 </button>

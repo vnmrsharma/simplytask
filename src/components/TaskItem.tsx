@@ -70,15 +70,15 @@ export const TaskItem: React.FC<TaskItemProps> = ({
               <Circle size={20} className="sm:w-6 sm:h-6" />
             )}
           </button>
-
+          
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2 sm:gap-4 mb-3">
               <div className="flex-1 min-w-0">
                 <h3 className={`text-base sm:text-lg font-semibold transition-all duration-200 ${
                   task.completed ? 'text-gray-500 line-through' : 'text-gray-900'
-                }`}>
-                  {task.title}
-                </h3>
+              }`}>
+                {task.title}
+              </h3>
                 
                 <div className="flex flex-wrap items-center gap-2 mt-2">
                   <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(task.priority)}`}>
@@ -131,7 +131,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
                 </button>
               </div>
             </div>
-
+            
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-600">
               <div className="flex items-center gap-1">
                 <Calendar size={14} />
@@ -154,8 +154,8 @@ export const TaskItem: React.FC<TaskItemProps> = ({
                 </div>
               )}
             </div>
-          </div>
-        </div>
+              </div>
+            </div>
 
         {showDetails && (
           <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
@@ -173,29 +173,29 @@ export const TaskItem: React.FC<TaskItemProps> = ({
 
             {(task.department || task.delegatedTo || task.budgetImpact !== 'none' || task.riskLevel !== 'low') && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {task.department && (
-                  <div>
+                  {task.department && (
+                    <div>
                     <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Department</span>
                     <p className="text-sm text-gray-900 mt-1">{task.department}</p>
-                  </div>
-                )}
+                    </div>
+                  )}
                 
                 {task.delegatedTo && (
-                  <div>
+                    <div>
                     <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Delegated To</span>
                     <p className="text-sm text-gray-900 mt-1">{task.delegatedTo}</p>
-                  </div>
-                )}
+                    </div>
+                  )}
                 
                 {task.budgetImpact !== 'none' && (
-                  <div>
+                    <div>
                     <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Budget Impact</span>
                     <p className={`text-sm mt-1 inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getBudgetImpactColor(task.budgetImpact)}`}>
-                      <DollarSign size={12} />
+                        <DollarSign size={12} />
                       {task.budgetImpact.charAt(0).toUpperCase() + task.budgetImpact.slice(1)}
                     </p>
-                  </div>
-                )}
+                    </div>
+                  )}
                 
                 {task.riskLevel !== 'low' && (
                   <div>
@@ -209,49 +209,49 @@ export const TaskItem: React.FC<TaskItemProps> = ({
               </div>
             )}
 
-            {task.stakeholders && task.stakeholders.length > 0 && (
-              <div>
+                {task.stakeholders && task.stakeholders.length > 0 && (
+                  <div>
                 <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
                   <Users size={14} />
                   Stakeholders
                 </h4>
                 <div className="flex flex-wrap gap-2">
                   {task.stakeholders.map((stakeholder, index) => (
-                    <span
+                        <span
                       key={index}
                       className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium"
-                    >
-                      {stakeholder}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+                        >
+                          {stakeholder}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
             {task.links && task.links.length > 0 && (
-              <div>
+                  <div>
                 <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
                   <ExternalLink size={14} />
                   Related Links
                 </h4>
-                <div className="space-y-2">
-                  {task.links.map((link) => (
-                    <a
-                      key={link.id}
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <div className="space-y-2">
+                      {task.links.map((link) => (
+                        <a
+                          key={link.id}
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
                       className="flex items-center gap-2 p-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all duration-200 group touch-manipulation"
-                    >
+                        >
                       <ExternalLink size={14} className="flex-shrink-0" />
                       <span className="group-hover:underline truncate">{link.title}</span>
-                    </a>
-                  ))}
-                </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
       </div>
     </div>
   );

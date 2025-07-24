@@ -123,13 +123,13 @@ export const generateWeeklyReport = (tasks: Task[], weekStart: string): WeeklyRe
   
   const bestDay = validDays.length > 0 
     ? validDays.reduce((best, current) => 
-        current.productivityScore > best.productivityScore ? current : best
+    current.productivityScore > best.productivityScore ? current : best
       ).date
     : dailyReports[0].date; // Fallback to first day if no valid days
 
   const worstDay = validDays.length > 0
     ? validDays.reduce((worst, current) => 
-        current.productivityScore < worst.productivityScore ? current : worst
+    current.productivityScore < worst.productivityScore ? current : worst
       ).date
     : dailyReports[6].date; // Fallback to last day if no valid days
 
@@ -181,13 +181,13 @@ export const generateMonthlyReport = (tasks: Task[], month: number, year: number
 
   const bestWeek = validWeeks.length > 0
     ? validWeeks.reduce((best, current) => 
-        current.weeklyProductivityScore > best.weeklyProductivityScore ? current : best
+    current.weeklyProductivityScore > best.weeklyProductivityScore ? current : best
       ).weekStart
     : weeklyReports.length > 0 ? weeklyReports[0].weekStart : monthStart.toISOString().split('T')[0];
 
   const worstWeek = validWeeks.length > 0
     ? validWeeks.reduce((worst, current) => 
-        current.weeklyProductivityScore < worst.weeklyProductivityScore ? current : worst
+    current.weeklyProductivityScore < worst.weeklyProductivityScore ? current : worst
       ).weekStart
     : weeklyReports.length > 0 ? weeklyReports[weeklyReports.length - 1].weekStart : monthStart.toISOString().split('T')[0];
 
@@ -210,7 +210,7 @@ export const generateMonthlyReport = (tasks: Task[], month: number, year: number
   
   const mostProductiveDay = validDailyReports.length > 0
     ? validDailyReports.reduce((best, current) => 
-        current.productivityScore > best.productivityScore ? current : best
+    current.productivityScore > best.productivityScore ? current : best
       ).date
     : allDailyReports.length > 0 ? allDailyReports[0].date : monthStart.toISOString().split('T')[0];
 

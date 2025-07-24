@@ -183,12 +183,12 @@ export const TaskCalendar: React.FC<TaskCalendarProps> = ({ tasks, onTaskClick, 
               
               return (
                 <div key={hour} className="flex hover:bg-gray-50">
-                  <div className="w-20 flex-shrink-0 p-4 text-sm text-gray-500 border-r border-gray-100">
+                  <div className="w-16 sm:w-20 flex-shrink-0 p-2 sm:p-4 text-xs sm:text-sm text-gray-500 border-r border-gray-100">
                     {hour === 0 ? '12 AM' : 
                      hour < 12 ? `${hour} AM` : 
                      hour === 12 ? '12 PM' : `${hour - 12} PM`}
                   </div>
-                  <div className="flex-1 p-4">
+                  <div className="flex-1 p-2 sm:p-4">
                     {hourTasks.length > 0 ? (
                       <div className="space-y-2">
                         {hourTasks.map(task => (
@@ -599,24 +599,24 @@ export const TaskCalendar: React.FC<TaskCalendarProps> = ({ tasks, onTaskClick, 
   ] as const;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header with Navigation and View Switcher */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           {/* Date Navigation */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 justify-center sm:justify-start">
             <button
               onClick={() => navigate('prev')}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
             >
               <ChevronLeft size={20} />
             </button>
             
-            <div className="text-center">
-              <h2 className="text-xl font-bold text-gray-900">
+            <div className="text-center flex-1 sm:flex-none">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
                 {formatDateHeader(currentDate, view)}
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-xs sm:text-sm text-gray-600 mt-1">
                 {currentViewTasks.length} task{currentViewTasks.length !== 1 ? 's' : ''} 
                 {view !== 'daily' ? ` this ${view.slice(0, -2)}` : ' today'}
               </p>
@@ -624,7 +624,7 @@ export const TaskCalendar: React.FC<TaskCalendarProps> = ({ tasks, onTaskClick, 
             
             <button
               onClick={() => navigate('next')}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
             >
               <ChevronRight size={20} />
             </button>
