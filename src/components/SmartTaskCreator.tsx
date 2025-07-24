@@ -59,6 +59,13 @@ interface ParsedTaskResponse {
   scheduleAnalysis?: string;
   conflictDetected?: boolean;
   conflictOptions?: any[];
+  searchCriteria?: any; // Added for search criteria in delete confirmation
+  // Advanced response properties
+  actions?: any[]; // For complex operations
+  optimizations?: any[]; // For optimization suggestions
+  clarificationNeeded?: any[]; // For clarification requests
+  partialUnderstanding?: any; // For partial understanding
+  confirmationNeeded?: boolean; // For confirmation needed
 }
 
 export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({ 
@@ -114,21 +121,100 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
 
   const handleTaskManagementAction = async (data: ParsedTaskResponse) => {
     switch (data.action) {
+      case 'delete':
+        if (data.searchCriteria) {
+          // Find tasks based on search criteria
+          const tasksToDelete = findTasksByCriteria(data.searchCriteria);
+          
+          if (tasksToDelete.length === 0) {
+            addMessage('assistant', "I couldn't find any tasks matching that description. Could you be more specific?");
+            return;
+          }
+          
+          if (tasksToDelete.length === 1) {
+            const task = tasksToDelete[0];
+            addMessage('assistant', `I found your "${task.title}" scheduled for ${formatDate(task.startDate)} at ${formatTime(task.startTime)}. Would you like me to cancel it?`);
+            
+            // Add confirmation buttons
+            setPendingAction({
+              type: 'delete_confirmation',
+              taskId: task.id,
+              taskTitle: task.title
+            });
+          } else {
+            // Multiple tasks found
+            const taskList = tasksToDelete.map(task => 
+              `• ${task.title} (${formatDate(task.startDate)} at ${formatTime(task.startTime)})`
+            ).join('\n');
+            
+            addMessage('assistant', `I found ${tasksToDelete.length} tasks to cancel:\n\n${taskList}\n\nWould you like me to cancel all of these?`);
+            
+            setPendingAction({
+              type: 'delete_multiple_confirmation',
+              taskIds: tasksToDelete.map(t => t.id),
+              tasks: tasksToDelete
+            });
+          }
+        } else if (data.taskId) {
+          // Direct task deletion
+          await onDeleteTask(data.taskId);
+          addMessage('assistant', `✅ ${data.response}`);
+        }
+        break;
+        
       case 'edit':
       case 'reschedule':
-        if (data.taskId && data.taskData) {
+        if (data.searchCriteria && data.taskData) {
+          // Find the task to edit based on search criteria
+          const tasksToEdit = findTasksByCriteria(data.searchCriteria);
+          
+          if (tasksToEdit.length === 0) {
+            addMessage('assistant', "I couldn't find any tasks matching that description. Could you be more specific?");
+            return;
+          }
+          
+          if (tasksToEdit.length === 1) {
+            const task = tasksToEdit[0];
+            
+            // Create updated task data by merging existing with new data
+            const updatedTaskData = {
+              ...task,
+              ...data.taskData,
+              // Handle date updates
+              startDate: data.taskData.startDate || task.startDate,
+              endDate: data.taskData.endDate || task.endDate,
+              // Handle time updates 
+              startTime: data.taskData.startTime || task.startTime,
+              endTime: data.taskData.endTime || task.endTime
+            };
+            
+            await onUpdateTask(task.id, updatedTaskData);
+            
+            // Show confirmation message
+            if (data.assistantMessage) {
+              addMessage('assistant', data.assistantMessage);
+            } else {
+              addMessage('assistant', `✅ Successfully updated "${task.title}"`);
+            }
+            
+            if (data.scheduleAnalysis) {
+              addMessage('assistant', `💡 ${data.scheduleAnalysis}`);
+            }
+          } else {
+            // Multiple tasks found - ask which one to edit
+            const taskList = tasksToEdit.map((task, index) => 
+              `${index + 1}. ${task.title} (${formatDate(task.startDate)} at ${formatTime(task.startTime)})`
+            ).join('\n');
+            
+            addMessage('assistant', `I found ${tasksToEdit.length} tasks matching that description:\n\n${taskList}\n\nWhich one would you like me to reschedule? Please be more specific.`);
+          }
+        } else if (data.taskId && data.taskData) {
+          // Direct task editing with specific task ID
           await onUpdateTask(data.taskId, data.taskData);
           addMessage('assistant', `✅ ${data.response}`);
           if (data.scheduleAnalysis) {
             addMessage('assistant', `💡 ${data.scheduleAnalysis}`);
           }
-        }
-        break;
-        
-      case 'delete':
-        if (data.taskId) {
-          await onDeleteTask(data.taskId);
-          addMessage('assistant', `✅ ${data.response}`);
         }
         break;
         
@@ -141,11 +227,11 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
           }
           
           if (data.scheduleData.freeSlots && data.scheduleData.freeSlots.length > 0) {
-            scheduleMessage += '\n\n🕐 **Free Time:**\n' + data.scheduleData.freeSlots.map(slot => `• ${slot}`).join('\n');
+            scheduleMessage += '\n\n🕐 **Free Time:**\n' + data.scheduleData.freeSlots.map((slot: string) => `• ${slot}`).join('\n');
           }
           
           if (data.scheduleData.insights && data.scheduleData.insights.length > 0) {
-            scheduleMessage += '\n\n💡 **Insights:**\n' + data.scheduleData.insights.map(insight => `• ${insight}`).join('\n');
+            scheduleMessage += '\n\n💡 **Insights:**\n' + data.scheduleData.insights.map((insight: string) => `• ${insight}`).join('\n');
           }
           
           addMessage('assistant', scheduleMessage);
@@ -158,6 +244,103 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
           addMessage('assistant', '💡 **Optimization Suggestions:**\n' + data.suggestions.map(s => `• ${s}`).join('\n'));
         }
         break;
+    }
+  };
+
+  const findTasksByCriteria = (criteria: any) => {
+    return tasks.filter(task => {
+      // Check title contains (case-insensitive)
+      if (criteria.title_contains) {
+        if (!task.title.toLowerCase().includes(criteria.title_contains.toLowerCase())) {
+          return false;
+        }
+      }
+      
+      // Check exact title match
+      if (criteria.title) {
+        if (task.title.toLowerCase() !== criteria.title.toLowerCase()) {
+          return false;
+        }
+      }
+      
+      // Check date
+      if (criteria.date) {
+        const today = new Date().toISOString().split('T')[0];
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+        
+        if (criteria.date === 'today' && task.startDate !== today) {
+          return false;
+        }
+        if (criteria.date === 'tomorrow' && task.startDate !== tomorrowStr) {
+          return false;
+        }
+        if (criteria.date !== 'today' && criteria.date !== 'tomorrow' && task.startDate !== criteria.date) {
+          return false;
+        }
+      }
+      
+      // Check category
+      if (criteria.category) {
+        if (task.category !== criteria.category) {
+          return false;
+        }
+      }
+      
+      // Check time (more flexible - check both start and end time)
+      if (criteria.time) {
+        const searchTime = criteria.time;
+        // Handle both HH:MM and H:MM formats
+        const normalizeTime = (timeStr: string) => {
+          const [hours, minutes] = timeStr.split(':');
+          return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+        };
+        
+        const normalizedSearchTime = normalizeTime(searchTime);
+        const normalizedStartTime = normalizeTime(task.startTime);
+        const normalizedEndTime = normalizeTime(task.endTime);
+        
+        if (normalizedStartTime !== normalizedSearchTime && normalizedEndTime !== normalizedSearchTime) {
+          return false;
+        }
+      }
+      
+      // Check start time specifically
+      if (criteria.startTime) {
+        if (task.startTime !== criteria.startTime) {
+          return false;
+        }
+      }
+      
+      // Check if task is completed (usually we want to exclude completed tasks from edits)
+      if (criteria.excludeCompleted !== false && task.completed) {
+        return false;
+      }
+      
+      return true;
+    });
+  };
+
+  const handleConfirmDeletion = async (taskId: string) => {
+    try {
+      await onDeleteTask(taskId);
+      addMessage('assistant', '✅ Task cancelled successfully!');
+      setPendingAction(null);
+    } catch (error) {
+      addMessage('assistant', '❌ Sorry, I had trouble cancelling that task. Please try again.');
+    }
+  };
+
+  const handleConfirmMultipleDeletion = async (taskIds: string[]) => {
+    try {
+      for (const taskId of taskIds) {
+        await onDeleteTask(taskId);
+      }
+      addMessage('assistant', `✅ Successfully cancelled ${taskIds.length} tasks!`);
+      setPendingAction(null);
+    } catch (error) {
+      addMessage('assistant', '❌ Sorry, I had trouble cancelling some tasks. Please try again.');
     }
   };
 
@@ -176,6 +359,148 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
       
       addMessage('assistant', optionsMessage);
       setPendingAction({ type: 'conflict_resolution', data: data });
+    }
+  };
+
+  const handleComplexOperation = async (data: ParsedTaskResponse) => {
+    // Show the overall response first
+    if (data.response) {
+      addMessage('assistant', data.response);
+    }
+    
+    if (data.actions && data.actions.length > 0) {
+      // Sort actions by priority if specified
+      const sortedActions = data.actions.sort((a, b) => (a.priority || 1) - (b.priority || 1));
+      
+      for (const action of sortedActions) {
+        // Convert action to task management format and execute
+        const actionData = {
+          ...data,
+          action: action.type,
+          searchCriteria: action.searchCriteria,
+          taskData: action.taskData,
+          response: action.description
+        };
+        await handleTaskManagementAction(actionData);
+      }
+    }
+    
+    if (data.assistantMessage) {
+      setTimeout(() => {
+        addMessage('assistant', data.assistantMessage);
+      }, 1000);
+    }
+    
+    if (data.scheduleAnalysis) {
+      setTimeout(() => {
+        addMessage('assistant', `💡 **Schedule Analysis:** ${data.scheduleAnalysis}`);
+      }, 2000);
+    }
+    
+    if (data.confirmationNeeded) {
+      // Set up confirmation flow if needed
+      setPendingAction({
+        type: 'complex_confirmation',
+        actions: data.actions,
+        message: data.assistantMessage || 'Would you like me to proceed with these changes?'
+      });
+    }
+  };
+
+  const handleOptimization = async (data: ParsedTaskResponse) => {
+    addMessage('assistant', data.response || 'I\'ve analyzed your schedule for optimization opportunities.');
+    
+    if (data.optimizations && data.optimizations.length > 0) {
+      let optimizationMessage = '\n\n🎯 **Optimization Recommendations:**\n\n';
+      
+      data.optimizations.forEach((opt, index) => {
+        optimizationMessage += `**${index + 1}. ${opt.description}**\n`;
+        optimizationMessage += `💫 Impact: ${opt.impact}\n`;
+        if (opt.actions && opt.actions.length > 0) {
+          optimizationMessage += `🔧 Actions: ${opt.actions.length} scheduled changes\n`;
+        }
+        optimizationMessage += '\n';
+      });
+      
+      addMessage('assistant', optimizationMessage);
+      
+      // If there are actionable optimizations, set up for execution
+      if (data.optimizations.some(opt => opt.actions && opt.actions.length > 0)) {
+        setPendingAction({
+          type: 'optimization_confirmation',
+          optimizations: data.optimizations,
+          message: 'Would you like me to implement these optimizations?'
+        });
+      }
+    }
+    
+    if (data.scheduleAnalysis) {
+      setTimeout(() => {
+        addMessage('assistant', `📊 **Analysis:** ${data.scheduleAnalysis}`);
+      }, 1000);
+    }
+  };
+
+  const handleClarification = async (data: ParsedTaskResponse) => {
+    addMessage('assistant', data.response || 'I need some clarification to help you better.');
+    
+    if (data.clarificationNeeded && data.clarificationNeeded.length > 0) {
+      let clarificationMessage = '\n\n❓ **I need clarification on:**\n\n';
+      
+      data.clarificationNeeded.forEach((clarification, index) => {
+        clarificationMessage += `**${index + 1}. ${clarification.question}**\n`;
+        if (clarification.suggestions && clarification.suggestions.length > 0) {
+          clarificationMessage += `💡 Suggestions: ${clarification.suggestions.join(', ')}\n`;
+        }
+        clarificationMessage += '\n';
+      });
+      
+      addMessage('assistant', clarificationMessage);
+    }
+    
+    if (data.partialUnderstanding) {
+      setTimeout(() => {
+        addMessage('assistant', '✅ **What I understood so far:** I can help with the parts I understand while we clarify the details.');
+      }, 1000);
+    }
+    
+    // Keep the conversation context for follow-up
+    setConversationContext(prev => `${prev}\nUser: ${input}\nAssistant: ${data.response || ''}\nClarification needed: ${JSON.stringify(data.clarificationNeeded)}`);
+  };
+
+  const handleOptimizationConfirmation = async () => {
+    if (pendingAction?.optimizations) {
+      for (const optimization of pendingAction.optimizations) {
+        if (optimization.actions) {
+          for (const action of optimization.actions) {
+            const actionData = {
+              action: action.type,
+              searchCriteria: action.searchCriteria,
+              taskData: action.taskData,
+              response: action.description || `Implementing ${optimization.description}`
+            };
+            await handleTaskManagementAction(actionData);
+          }
+        }
+      }
+      addMessage('assistant', '✅ All optimizations have been implemented! Your schedule is now more efficient.');
+      setPendingAction(null);
+    }
+  };
+
+  const handleComplexConfirmation = async () => {
+    if (pendingAction?.actions) {
+      for (const action of pendingAction.actions) {
+        const actionData = {
+          action: action.type,
+          searchCriteria: action.searchCriteria,
+          taskData: action.taskData,
+          response: action.description
+        };
+        await handleTaskManagementAction(actionData);
+      }
+      addMessage('assistant', '✅ All actions completed successfully!');
+      setPendingAction(null);
     }
   };
 
@@ -222,8 +547,21 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
       // Handle different response types
       if (data.conversationType) {
         console.log('Handling conversational response:', data.conversationType);
+        
+        // Handle complex multi-action operations
+        if (data.conversationType === 'complex_operation' && data.actions) {
+          await handleComplexOperation(data);
+        }
+        // Handle optimization suggestions
+        else if (data.conversationType === 'optimization' && data.optimizations) {
+          await handleOptimization(data);
+        }
+        // Handle clarification requests
+        else if (data.conversationType === 'clarification') {
+          await handleClarification(data);
+        }
         // Handle conversational responses
-        if (data.conversationType === 'scheduling') {
+        else if (data.conversationType === 'scheduling') {
           // This is a scheduling response - treat it like a parsed task
           if (data.title) {
             // First show the assistant's helpful message if available
@@ -582,6 +920,102 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
                 className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 transition-colors"
               >
                 Reschedule
+              </button>
+            </div>
+          )}
+
+          {/* Deletion Confirmation Buttons */}
+          {pendingAction?.type === 'delete_confirmation' && (
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => handleConfirmDeletion(pendingAction.taskId)}
+                disabled={isLoading}
+                className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors"
+              >
+                Yes, Cancel Task
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingAction(null);
+                  addMessage('assistant', 'Task cancellation cancelled. Let me know if you need anything else.');
+                }}
+                className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 transition-colors"
+              >
+                Keep Task
+              </button>
+            </div>
+          )}
+
+          {/* Multiple Deletion Confirmation Buttons */}
+          {pendingAction?.type === 'delete_multiple_confirmation' && (
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => handleConfirmMultipleDeletion(pendingAction.taskIds)}
+                disabled={isLoading}
+                className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors"
+              >
+                Yes, Cancel All
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingAction(null);
+                  addMessage('assistant', 'Cancellation cancelled. Your tasks remain scheduled.');
+                }}
+                className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 transition-colors"
+              >
+                Keep Tasks
+              </button>
+            </div>
+          )}
+
+          {/* Complex Confirmation Buttons */}
+          {pendingAction?.type === 'complex_confirmation' && (
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={handleComplexConfirmation}
+                disabled={isLoading}
+                className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
+              >
+                Yes, Proceed
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingAction(null);
+                  addMessage('assistant', 'Complex operation cancelled. Your schedule remains as is.');
+                }}
+                className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+
+          {/* Optimization Confirmation Buttons */}
+          {pendingAction?.type === 'optimization_confirmation' && (
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={handleOptimizationConfirmation}
+                disabled={isLoading}
+                className="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition-colors"
+              >
+                Yes, Implement
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingAction(null);
+                  addMessage('assistant', 'Optimization cancelled. Your schedule remains as is.');
+                }}
+                className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 transition-colors"
+              >
+                Cancel
               </button>
             </div>
           )}
