@@ -681,6 +681,83 @@ IMPORTANT: Always respond with valid JSON only. Use your intelligence to parse e
     // Handle conversational responses (non-scheduling)
     if (parsedTask.conversationType && parsedTask.conversationType !== 'scheduling') {
       console.log('Returning conversational response');
+
+      // === PRODUCTIVITY INSIGHTS & REPORTS ===
+      if (parsedTask.conversationType === 'report') {
+        // Always calculate and include all relevant data
+        const now = new Date();
+        const month = now.getMonth();
+        const year = now.getFullYear();
+        const { generateMonthlyReport, getProductivityInsight } = require('../src/utils/reportUtils');
+        const monthlyReport = generateMonthlyReport(existingTasks || [], month, year);
+        let assistantMessage = parsedTask.assistantMessage || '';
+        // Always include most productive day and productivity score
+        const mostProductiveDay = monthlyReport.categoryInsights.mostProductiveDay;
+        const productivityScore = monthlyReport.monthlyProductivityScore;
+        const productivityMsg = getProductivityInsight(productivityScore).message;
+        // Top priorities: most frequent categories or days with most completions
+        const priorities = Object.entries(monthlyReport.weeklyBreakdown.reduce((acc: Record<string, number>, week: any) => {
+          week.dailyBreakdown.forEach((day: any) => {
+            acc[day.date] = (acc[day.date] || 0) + day.tasksCompleted;
+          });
+          return acc;
+        }, {}));
+        const sorted = priorities.sort((a, b) => b[1] - a[1]);
+        const top = sorted.slice(0, 3).map(([date]) => date);
+        // Compose a smart, motivating message
+        if (!assistantMessage) {
+          assistantMessage = `Your most productive day this month was ${mostProductiveDay} with an average of ${monthlyReport.categoryInsights.averageTasksPerDay} tasks per day. Your top priorities were on: ${top.join(', ')}. ${productivityMsg}`;
+        }
+        // If the user query was ambiguous (e.g., "Show me my productivity"), ask a follow-up
+        if (!parsedTask.period || !parsedTask.reportType) {
+          return res.status(200).json({
+            ...parsedTask,
+            mostProductiveDay,
+            topPriorities: top,
+            productivityScore,
+            assistantMessage,
+            followUp: true,
+            response: 'Would you like to see this for a different period (week, year) or a specific type of insight (top priorities, focus time, etc.)?'
+          });
+        }
+        return res.status(200).json({
+          ...parsedTask,
+          mostProductiveDay,
+          topPriorities: top,
+          productivityScore,
+          assistantMessage
+        });
+      }
+      // === SMART SUGGESTIONS ===
+      if (parsedTask.conversationType === 'suggestion') {
+        if (!parsedTask.assistantMessage) {
+          parsedTask.assistantMessage = 'Here is a smart suggestion to optimize your productivity!';
+        }
+        // If suggestion is vague, ask a follow-up
+        if (!parsedTask.suggestionType || !parsedTask.time) {
+          return res.status(200).json({
+            ...parsedTask,
+            followUp: true,
+            response: 'Would you like to schedule focus time, a break, or something else? What time works best for you?'
+          });
+        }
+        return res.status(200).json(parsedTask);
+      }
+      // === PERSONALIZED MOTIVATION ===
+      if (parsedTask.conversationType === 'motivation') {
+        if (!parsedTask.assistantMessage) {
+          parsedTask.assistantMessage = 'Keep going! Every step counts.';
+        }
+        // If motivation is generic, ask for a goal or streak
+        if (!parsedTask.motivationType) {
+          return res.status(200).json({
+            ...parsedTask,
+            followUp: true,
+            response: 'Is there a specific goal or streak you want to celebrate or track?'
+          });
+        }
+        return res.status(200).json(parsedTask);
+      }
       
       // Special handling for schedule_view to calculate actual free time
       if (parsedTask.conversationType === 'schedule_view' && parsedTask.scheduleData) {
