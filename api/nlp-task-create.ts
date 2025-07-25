@@ -51,13 +51,23 @@ interface NLPResponse {
 }
 
 export default async function handler(req: any, res: any) {
-  console.log('API handler called:', req.method);
+  // console.log('API handler called:', req.method);
   
-  // Add CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  // Add CORS headers - More secure configuration
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'https://simplytasked.vercel.app',
+    process.env.FRONTEND_URL
+  ].filter(Boolean);
+  
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', false);
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -65,31 +75,59 @@ export default async function handler(req: any, res: any) {
   }
 
   if (req.method !== 'POST') {
-    console.log('Method not allowed:', req.method);
+    // console.log('Method not allowed:', req.method);
     return res.status(405).json({ status: 'error', message: 'Method not allowed' });
   }
 
   if (!process.env.OPENAI_API_KEY) {
-    console.error('OPENAI_API_KEY is not set');
+    // console.error('OPENAI_API_KEY is not set');
     return res.status(500).json({ status: 'error', message: 'OpenAI API key is not configured' });
   }
 
   try {
-    console.log('Processing request body...');
+    // console.log('Processing request body...');
     const { inputText, existingTasks, userId, conversationContext } = req.body;
     
-    console.log('Request data:', {
-      inputText: inputText || 'undefined',
-      existingTasksCount: existingTasks?.length || 0,
-      conversationContext: conversationContext || 'none'
-    });
+    // console.log('Request data:', {
+    //   inputText: inputText || 'undefined',
+    //   existingTasksCount: existingTasks?.length || 0,
+    //   conversationContext: conversationContext || 'none'
+    // });
 
     if (!inputText) {
-      console.log('No input text provided');
+      // console.log('No input text provided');
       return res.status(400).json({ status: 'error', message: 'Input text is required' });
     }
 
-    console.log('Creating system prompt...');
+    // Input sanitization and validation
+    const sanitizedInput = inputText.trim();
+    
+    // Validate input length (prevent abuse)
+    if (sanitizedInput.length > 1000) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'Input text is too long. Please limit to 1000 characters.' 
+      });
+    }
+    
+    // Basic prompt injection prevention
+    const suspiciousPatterns = [
+      /ignore\s+previous\s+instructions/i,
+      /forget\s+everything/i,
+      /system\s*:/i,
+      /\[INST\]/i,
+      /<\|im_start\|>/i
+    ];
+    
+    const hasSuspiciousContent = suspiciousPatterns.some(pattern => pattern.test(sanitizedInput));
+    if (hasSuspiciousContent) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'Invalid input detected. Please rephrase your request.' 
+      });
+    }
+
+    // console.log('Creating system prompt...');
     // Create system prompt for task parsing
     const systemPrompt = `You are Donna, an advanced AI scheduling assistant with comprehensive calendar intelligence and natural language understanding. You are designed to handle ANY scheduling-related request with precision, context awareness, and proactive problem-solving.
 
@@ -485,7 +523,7 @@ IMPORTANT: Always respond with valid JSON only. Use your intelligence to parse e
       ? `Previous context: ${conversationContext}\n\nUser's new message: ${inputText}`
       : inputText;
 
-    console.log('Making OpenAI API call...');
+    // console.log('Making OpenAI API call...');
     
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error('OpenAI request timeout')), 25000);
@@ -504,29 +542,29 @@ IMPORTANT: Always respond with valid JSON only. Use your intelligence to parse e
       timeoutPromise
     ]) as any;
 
-    console.log('OpenAI response received successfully');
+    // console.log('OpenAI response received successfully');
 
     const responseText = completion.choices[0]?.message?.content;
     if (!responseText) {
-      console.error('No response text from OpenAI');
+      // console.error('No response text from OpenAI');
       throw new Error('No response from AI');
     }
 
-    console.log('Raw OpenAI response:', responseText);
+    // console.log('Raw OpenAI response:', responseText);
 
     let parsedTask: ParsedTask & { needsFollowUp?: boolean; followUpQuestion?: string; assistantMessage?: string };
     try {
       parsedTask = JSON.parse(responseText);
-      console.log('Successfully parsed response:', parsedTask);
+      // console.log('Successfully parsed response:', parsedTask);
     } catch (parseError) {
-      console.error('JSON parse error:', parseError);
-      console.error('Raw response:', responseText);
+      // console.error('JSON parse error:', parseError);
+      // console.error('Raw response:', responseText);
       throw new Error('Invalid response format from AI');
     }
 
     // Handle conversational responses (non-scheduling)
     if (parsedTask.conversationType && parsedTask.conversationType !== 'scheduling') {
-      console.log('Returning conversational response');
+      // console.log('Returning conversational response');
       
       // Special handling for schedule_view to calculate actual free time
       if (parsedTask.conversationType === 'schedule_view' && parsedTask.scheduleData) {
@@ -583,10 +621,10 @@ IMPORTANT: Always respond with valid JSON only. Use your intelligence to parse e
 
     // Handle scheduling responses
     if (parsedTask.conversationType === 'scheduling' || parsedTask.title) {
-      console.log('Processing scheduling response');
+      // console.log('Processing scheduling response');
       // Validate required fields for task creation
       if (!parsedTask.title || !parsedTask.startDate || !parsedTask.startTime || !parsedTask.endTime) {
-        console.log('Missing required fields for scheduling');
+        // console.log('Missing required fields for scheduling');
         return res.status(200).json({
           status: 'need_more_info',
           question: 'I need a bit more information to schedule this task. Could you please specify the title, date, start time, and end time?',
@@ -598,7 +636,7 @@ IMPORTANT: Always respond with valid JSON only. Use your intelligence to parse e
       const conflicts = checkConflicts(parsedTask, existingTasks || []);
       
       if (conflicts.length > 0) {
-        console.log('Conflicts detected:', conflicts.length);
+        // console.log('Conflicts detected:', conflicts.length);
         return res.status(200).json({
           status: 'conflict',
           message: `You have ${conflicts.length} conflicting task(s) during this time. Would you like to reschedule?`,
@@ -608,7 +646,7 @@ IMPORTANT: Always respond with valid JSON only. Use your intelligence to parse e
       }
 
       // Return scheduling task data
-      console.log('Returning successful scheduling response');
+      // console.log('Returning successful scheduling response');
       return res.status(200).json({
         conversationType: 'scheduling',
         title: parsedTask.title,
@@ -625,14 +663,14 @@ IMPORTANT: Always respond with valid JSON only. Use your intelligence to parse e
       });
     }
 
-    console.log('No valid response type detected, treating as error');
+    // console.log('No valid response type detected, treating as error');
     return res.status(200).json({
       status: 'error',
       message: 'I had trouble understanding your request. Could you try rephrasing?'
     });
 
   } catch (error: any) {
-    console.error('NLP Task Creation Error:', error);
+    // console.error('NLP Task Creation Error:', error);
     return res.status(500).json({ 
       status: 'error', 
       message: error.message || 'Failed to process task request',

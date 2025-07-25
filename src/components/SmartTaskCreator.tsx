@@ -529,7 +529,7 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
         setOperationStatus('');
         addMessage('assistant', '✅ All actions completed successfully!');
       } catch (error) {
-        console.error('Error executing complex confirmation:', error);
+        // console.error('Error executing complex confirmation:', error);
         setOperationStatus('');
         addMessage('assistant', '❌ Sorry, I encountered an error while processing your request. Please try again.');
       }
@@ -551,11 +551,11 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
     setShowConversation(true);
 
     try {
-      console.log('Making API call to /api/nlp-task-create with:', {
-        inputText: userInput,
-        existingTasks: tasks?.length || 0,
-        conversationContext: conversationContext
-      });
+      // console.log('Making API call to /api/nlp-task-create with:', {
+      //   inputText: userInput,
+      //   existingTasks: tasks?.length || 0,
+      //   conversationContext: conversationContext
+      // });
 
       const response = await fetch('/api/nlp-task-create', {
         method: 'POST',
@@ -569,13 +569,13 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
         }),
       });
 
-      console.log('API response received:', response.status);
+      // console.log('API response received:', response.status);
       const data = await response.json();
-      console.log('Parsed response data:', data);
+      // console.log('Parsed response data:', data);
 
       // Handle different response types
       if (data.conversationType) {
-        console.log('Handling conversational response:', data.conversationType);
+        // console.log('Handling conversational response:', data.conversationType);
         
         // Handle complex multi-action operations
         if (data.conversationType === 'complex_operation' && data.actions) {
@@ -592,9 +592,9 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
         // Handle conversational responses
         else if (data.conversationType === 'scheduling') {
           // This is a scheduling response - treat it like a parsed task
-          console.log('Processing scheduling response with data:', data);
+          // console.log('Processing scheduling response with data:', data);
           if (data.title) {
-            console.log('Task data found, creating task...');
+            // console.log('Task data found, creating task...');
             // First show the assistant's helpful message if available
             if (data.assistantMessage) {
               addMessage('assistant', data.assistantMessage);
@@ -616,9 +616,9 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
               participants: data.participants || [],
             };
             
-            console.log('Calling onCreateTask with:', taskData);
+            // console.log('Calling onCreateTask with:', taskData);
             await onCreateTask(taskData);
-            console.log('onCreateTask completed');
+            // console.log('onCreateTask completed');
             
             // Add a confirmation message
             addMessage('assistant', `✅ All set! "${data.title}" is now in your calendar for ${formatDate(data.startDate!)} at ${formatTime(data.startTime!)}.`);
@@ -633,7 +633,7 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
               }
             }, 4000);
           } else {
-            console.log('No task title found in scheduling response');
+            // console.log('No task title found in scheduling response');
             addMessage('assistant', 'I had trouble understanding the task details. Could you try rephrasing?');
           }
         } else {
@@ -698,7 +698,7 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
                 response.toLowerCase().includes('created') || response.toLowerCase().includes('scheduled') ||
                 response.toLowerCase().includes('successfully added')) {
               
-              console.log('Detected task creation intent in conversational response, requesting proper task format...');
+              // console.log('Detected task creation intent in conversational response, requesting proper task format...');
               
               // Send a follow-up request asking for the task details in proper format
               setTimeout(async () => {
@@ -715,10 +715,10 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
                   
                   if (followUpResponse.ok) {
                     const followUpData = await followUpResponse.json();
-                    console.log('Follow-up response:', followUpData);
+                    // console.log('Follow-up response:', followUpData);
                     
                     if (followUpData.conversationType === 'scheduling' && followUpData.title) {
-                      console.log('Got proper scheduling format in follow-up, creating task...');
+                      // console.log('Got proper scheduling format in follow-up, creating task...');
                       const taskData = {
                         title: followUpData.title,
                         description: followUpData.description || '',
@@ -737,7 +737,7 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
                     }
                   }
                 } catch (error) {
-                  console.error('Follow-up request failed:', error);
+                  // console.error('Follow-up request failed:', error);
                 }
               }, 1000);
             }
@@ -815,11 +815,11 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
       }
 
     } catch (error: any) {
-      console.error('Error in handleSubmit:', error);
+      // console.error('Error in handleSubmit:', error);
       addMessage('assistant', `❌ Sorry, I encountered an error: ${error.message || 'Unknown error'}. Please try again.`);
     } finally {
       setIsSubmitting(false);
-      console.log('Request completed, loading set to false');
+      // console.log('Request completed, loading set to false');
     }
   };
 

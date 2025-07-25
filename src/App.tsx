@@ -117,13 +117,12 @@ function App() {
   };
 
   const handleSignOut = async () => {
+    setIsSigningOut(true);
     try {
-      setIsSigningOut(true);
       await signOut();
     } catch (error) {
-      console.error('Sign out error:', error);
-      // Even if there's an error, we can still clear local state and redirect
-      // The user should be logged out from the UI perspective
+      // console.error('Sign out error:', error);
+      // Even if there's an error, we'll still clear the UI state
     } finally {
       setIsSigningOut(false);
     }
@@ -313,17 +312,16 @@ function App() {
       </div>
     </ErrorBoundary>
   );
-  } catch (error: any) {
-    console.error('App component error:', error);
+  } catch (error) {
+    // console.error('App component error:', error);
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center max-w-md">
-          <AlertTriangle className="h-12 w-12 text-red-600 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-red-800 mb-2">Application Error</h2>
-          <p className="text-red-700 mb-4">Something went wrong. Please refresh the page to continue.</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+      <div className="min-h-screen bg-red-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full text-center">
+          <h2 className="text-xl font-bold text-red-600 mb-2">Application Error</h2>
+          <p className="text-gray-600 mb-4">Something went wrong. Please refresh the page.</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             Refresh Page
           </button>

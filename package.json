@@ -1,12 +1,15 @@
 {
-  "name": "vite-react-typescript-starter",
+  "name": "simply-task",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "audit": "npm audit",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.52.0",
