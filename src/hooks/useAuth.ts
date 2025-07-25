@@ -282,10 +282,25 @@ export function useAuth() {
   const signInWithGoogle = async () => {
     clearError();
     return handleAsync(async () => {
+      // Determine the correct redirect URL based on environment
+      const getRedirectUrl = () => {
+        if (typeof window !== 'undefined') {
+          const currentOrigin = window.location.origin;
+          // If we're on localhost, use localhost for development
+          if (currentOrigin.includes('localhost')) {
+            return currentOrigin;
+          }
+          // If we're on Vercel or production, use the production URL
+          return 'https://simplytasked.vercel.app';
+        }
+        // Fallback to production URL
+        return 'https://simplytasked.vercel.app';
+      };
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: getRedirectUrl(),
         },
       });
       
