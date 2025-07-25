@@ -70,6 +70,9 @@ interface ParsedTaskResponse {
   overdueTasks?: number; // Added for reporting
   totalTasks?: number; // Added for reporting
   productivityScore?: number; // Added for reporting
+  suggestionType?: string; // Added for suggestion
+  time?: string; // Added for suggestion
+  motivationType?: string; // Added for motivation
 }
 
 export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({ 
@@ -659,6 +662,29 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
             reportMessage += `📈 Productivity score: ${data.productivityScore}%\n`;
           }
           addMessage('assistant', reportMessage.trim());
+        } else if (data.conversationType === 'suggestion') {
+          // Smart Suggestions (e.g., focus time, wellness)
+          let suggestionMsg = '';
+          if (data.assistantMessage) {
+            suggestionMsg += `💡 ${data.assistantMessage}\n`;
+          }
+          if (data.suggestionType) {
+            suggestionMsg += `Type: ${data.suggestionType}\n`;
+          }
+          if (data.time) {
+            suggestionMsg += `Suggested Time: ${data.time}\n`;
+          }
+          addMessage('assistant', suggestionMsg.trim());
+        } else if (data.conversationType === 'motivation') {
+          // Personalized Motivation (celebration, encouragement)
+          let motivationMsg = '';
+          if (data.assistantMessage) {
+            motivationMsg += `🎉 ${data.assistantMessage}\n`;
+          }
+          if (data.motivationType) {
+            motivationMsg += `Type: ${data.motivationType}\n`;
+          }
+          addMessage('assistant', motivationMsg.trim());
         }
         else {
           // Handle other conversational responses (greeting, casual, etc.)
