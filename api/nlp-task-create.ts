@@ -602,6 +602,58 @@ When a user asks to CREATE, ADD, SCHEDULE, or mentions wanting to do something a
 
 IMPORTANT: Always respond with valid JSON only. Use your intelligence to parse even the most complex requests into actionable steps.`;
 
+    // === REPORTING & PRODUCTIVITY QUERIES ===
+    // When the user asks about stats, productivity, or reports (e.g. "How many tasks have I completed this month?", "Show me my productivity for the last week", "How many overdue tasks do I have?"), ALWAYS respond with a structured JSON object like this:
+    //
+    // {
+    //   "conversationType": "report",
+    //   "reportType": "task_completion|overdue|productivity|custom",
+    //   "period": "monthly|weekly|daily|custom",
+    //   "completedTasks": 12, // (if relevant)
+    //   "overdueTasks": 3,    // (if relevant)
+    //   "totalTasks": 20,     // (if relevant)
+    //   "productivityScore": 87, // (if relevant, 0-100)
+    //   "assistantMessage": "You've completed 12 tasks this month. Great job!"
+    // }
+    //
+    // If the user asks for a custom report, include as much relevant data as possible in the JSON.
+    //
+    // EXAMPLES:
+    //
+    // User: "How many tasks have I completed this month?"
+    // Response:
+    // {
+    //   "conversationType": "report",
+    //   "reportType": "task_completion",
+    //   "period": "monthly",
+    //   "completedTasks": 12,
+    //   "assistantMessage": "You've completed 12 tasks this month. Great job!"
+    // }
+    //
+    // User: "Show me my productivity for the last week."
+    // Response:
+    // {
+    //   "conversationType": "report",
+    //   "reportType": "productivity",
+    //   "period": "weekly",
+    //   "completedTasks": 8,
+    //   "totalTasks": 10,
+    //   "productivityScore": 80,
+    //   "assistantMessage": "You completed 8 out of 10 tasks last week. Your productivity score is 80%. Keep it up!"
+    // }
+    //
+    // User: "How many overdue tasks do I have?"
+    // Response:
+    // {
+    //   "conversationType": "report",
+    //   "reportType": "overdue",
+    //   "period": "current",
+    //   "overdueTasks": 3,
+    //   "assistantMessage": "You currently have 3 overdue tasks. Let's try to tackle them!"
+    // }
+    //
+    // NEVER respond with plain text for stats/reports. Always use the JSON format above.
+
     const userPrompt = conversationContext 
       ? `Previous context: ${conversationContext}\n\nUser's new message: ${inputText}`
       : inputText;

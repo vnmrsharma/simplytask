@@ -66,6 +66,10 @@ interface ParsedTaskResponse {
   clarificationNeeded?: any[]; // For clarification requests
   partialUnderstanding?: any; // For partial understanding
   confirmationNeeded?: boolean; // For confirmation needed
+  completedTasks?: number; // Added for reporting
+  overdueTasks?: number; // Added for reporting
+  totalTasks?: number; // Added for reporting
+  productivityScore?: number; // Added for reporting
 }
 
 export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({ 
@@ -636,7 +640,27 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
             console.log('No task title found in scheduling response');
             addMessage('assistant', 'I had trouble understanding the task details. Could you try rephrasing?');
           }
-        } else {
+        } else if (data.conversationType === 'report') {
+          // Handle reporting/statistics responses
+          let reportMessage = '';
+          if (data.assistantMessage) {
+            reportMessage += data.assistantMessage + '\n';
+          }
+          if (typeof data.completedTasks === 'number') {
+            reportMessage += `✅ Tasks completed: ${data.completedTasks}\n`;
+          }
+          if (typeof data.overdueTasks === 'number') {
+            reportMessage += `⏰ Overdue tasks: ${data.overdueTasks}\n`;
+          }
+          if (typeof data.totalTasks === 'number') {
+            reportMessage += `🗂️ Total tasks: ${data.totalTasks}\n`;
+          }
+          if (typeof data.productivityScore === 'number') {
+            reportMessage += `📈 Productivity score: ${data.productivityScore}%\n`;
+          }
+          addMessage('assistant', reportMessage.trim());
+        }
+        else {
           // Handle other conversational responses (greeting, casual, etc.)
           if (data.conversationType === 'task_management') {
             await handleTaskManagementAction(data, false);
