@@ -157,7 +157,7 @@ const AuthForm: React.FC = () => {
         }
       }
     } catch (error) {
-      // console.error('Auth error:', error);
+      console.error('Auth error:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -178,7 +178,7 @@ const AuthForm: React.FC = () => {
     try {
       await signInWithGoogle();
     } catch (error) {
-      // console.error('Google sign-in error:', error);
+      console.error('Google sign-in error:', error);
     } finally {
       setIsSubmitting(false);
     }

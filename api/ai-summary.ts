@@ -94,7 +94,7 @@ Summary:
 
     if (!openaiRes.ok) {
       const error = await openaiRes.text();
-      // console.error('OpenAI error:', error);
+      console.error('OpenAI error:', error);
       return res.status(500).json({ error: 'OpenAI error: ' + error });
     }
 
@@ -103,7 +103,7 @@ Summary:
 
     res.status(200).json({ summary });
   } catch (err: any) {
-    // console.error('Server error:', err);
+    console.error('Server error:', err);
     res.status(500).json({ error: err.message || 'Server error' });
   }
 } 

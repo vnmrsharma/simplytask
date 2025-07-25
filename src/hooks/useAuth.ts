@@ -92,7 +92,7 @@ export function useAuth() {
         setSession(session);
         setUser(session?.user ?? null);
       } catch (error) {
-        // console.error('Error initializing auth:', error);
+        console.error('Error initializing auth:', error);
         setError('network', 'Failed to initialize authentication', 'Please check your internet connection');
       } finally {
         setLoading(false);
@@ -138,7 +138,7 @@ export function useAuth() {
       });
       
       if (error) {
-        // console.error('Supabase signUp error:', error);
+        console.error('Supabase signUp error:', error);
         
         // Handle specific Supabase errors
         if (error.message.includes('already registered')) {
@@ -198,7 +198,7 @@ export function useAuth() {
       });
       
       if (error) {
-        // console.error('Supabase signIn error:', error);
+        console.error('Supabase signIn error:', error);
         
         // Handle specific Supabase errors
         if (error.message.includes('email_not_confirmed')) {
@@ -254,7 +254,7 @@ export function useAuth() {
       });
       
       if (error) {
-        // console.error('Supabase resetPassword error:', error);
+        console.error('Supabase resetPassword error:', error);
         
         if (error.message.includes('email_not_found') || error.message.includes('user_not_found')) {
           setError('auth', 'Email not found', 
@@ -290,7 +290,7 @@ export function useAuth() {
       });
       
       if (error) {
-        // console.error('Supabase Google signIn error:', error);
+        console.error('Supabase Google signIn error:', error);
         
         // Handle specific OAuth errors
         if (error.message.includes('popup_blocked')) {
@@ -328,7 +328,7 @@ export function useAuth() {
     return handleAsync(async () => {
       const { error } = await supabase.auth.signOut();
       if (error) {
-        // console.error('Supabase signOut error:', error);
+        console.error('Supabase signOut error:', error);
         setError('general', 'Sign out failed', error.message, ['Try refreshing the page']);
         // Don't throw error - user should still be logged out from UI perspective
         return;

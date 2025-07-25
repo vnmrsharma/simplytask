@@ -26,7 +26,7 @@ export function useErrorHandler() {
         (error instanceof Error ? error.message : 'An unexpected error occurred');
       
       setErrorState({ error: message, isLoading: false });
-      // console.error('Error in async operation:', error);
+      console.error('Error in async operation:', error);
       return null;
     }
   }, []);
