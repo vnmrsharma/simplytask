@@ -279,6 +279,50 @@ export function useAuth() {
     }, 'Failed to send password reset email');
   };
 
+  const signInWithGoogle = async () => {
+    clearError();
+    return handleAsync(async () => {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      
+      if (error) {
+        console.error('Supabase Google signIn error:', error);
+        
+        // Handle specific OAuth errors
+        if (error.message.includes('popup_blocked')) {
+          setError('auth', 'Popup blocked', 
+            'Please allow popups for this site and try again.',
+            ['Enable popups in your browser', 'Try refreshing and signing in again']);
+          return null;
+        }
+        
+        if (error.message.includes('oauth_provider_not_supported')) {
+          setError('auth', 'Google sign-in not available', 
+            'Google authentication is temporarily unavailable.',
+            ['Try signing in with email and password', 'Contact support if this persists']);
+          return null;
+        }
+        
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          setError('network', 'Network connection failed', 
+            'Unable to connect to Google for authentication.',
+            ['Check your internet connection', 'Try again in a moment']);
+          return null;
+        }
+        
+        // Generic error fallback
+        setError('general', 'Google sign-in failed', error.message, ['Please try again']);
+        return null;
+      }
+      
+      return data;
+    }, 'Failed to sign in with Google');
+  };
+
   const signOut = async () => {
     clearError();
     return handleAsync(async () => {
@@ -300,6 +344,7 @@ export function useAuth() {
     clearError,
     signUp,
     signIn,
+    signInWithGoogle,
     signOut,
     resetPassword,
     validatePassword,
