@@ -668,20 +668,25 @@ export const SmartTaskCreator: React.FC<SmartTaskCreatorProps> = ({
             // Handle schedule viewing
             if (data.scheduleData) {
               let scheduleMessage = data.response + '\n\n';
-              
-              if (data.scheduleData.tasks && data.scheduleData.tasks.length > 0) {
+              // Defensive: tasks
+              if (Array.isArray(data.scheduleData.tasks) && data.scheduleData.tasks.length > 0) {
                 scheduleMessage += '📅 **Your Tasks:**\n' + formatTaskList(data.scheduleData.tasks);
+              } else if (typeof data.scheduleData.tasks === 'string') {
+                scheduleMessage += '📅 **Your Tasks:**\n' + data.scheduleData.tasks;
               }
-              
-              if (data.scheduleData.freeSlots && data.scheduleData.freeSlots.length > 0) {
+              // Defensive: freeSlots
+              if (Array.isArray(data.scheduleData.freeSlots) && data.scheduleData.freeSlots.length > 0) {
                 scheduleMessage += '\n\n🕐 **Free Time:**\n' + data.scheduleData.freeSlots.map((slot: string) => `• ${slot}`).join('\n');
+              } else if (typeof data.scheduleData.freeSlots === 'string') {
+                scheduleMessage += '\n\n🕐 **Free Time:**\n' + data.scheduleData.freeSlots;
               }
-              
-              if (data.scheduleData.insights && data.scheduleData.insights.length > 0) {
+              // Defensive: insights
+              if (Array.isArray(data.scheduleData.insights) && data.scheduleData.insights.length > 0) {
                 scheduleMessage += '\n\n💡 **Insights:**\n' + data.scheduleData.insights.map((insight: string) => `• ${insight}`).join('\n');
+              } else if (typeof data.scheduleData.insights === 'string') {
+                scheduleMessage += '\n\n💡 **Insights:**\n' + data.scheduleData.insights;
               }
-              
-              addMessage('assistant', scheduleMessage);
+              addMessage('assistant', scheduleMessage.trim());
             } else {
               addMessage('assistant', data.response || 'Let me check your schedule...');
             }
